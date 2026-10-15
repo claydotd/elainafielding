@@ -3,9 +3,9 @@ import { HomepageCarousel } from '../components/Carousels'
 import { useState } from 'react'
 
 const images: string[] = [
-  '/images/home/1.png',
-  '/images/home/2.png',
-  '/images/home/3.png'
+  `${import.meta.env.BASE_URL}images/home/1.png`,
+  `${import.meta.env.BASE_URL}images/home/2.png`,
+  `${import.meta.env.BASE_URL}images/home/3.png`,
 ]
 
 export function Home() {

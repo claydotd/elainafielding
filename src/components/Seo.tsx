@@ -1,9 +1,9 @@
 import { Helmet } from 'react-helmet-async'
 
 const SITE_NAME = 'Elaina Fielding'
-const SITE_URL = 'https://elainafielding.com'
+const SITE_URL = 'https://claydotd.github.io/elainafielding'
 const DEFAULT_DESCRIPTION =
-  'Elaina Fielding — portfolio and selected work.'
+  'Elaina Fielding | Artist'
 
 type SeoProps = {
   title?: string

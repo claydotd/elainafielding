@@ -3,21 +3,21 @@ import { WorkGalleryItem } from '../components/WorkGalleryItem'
 
 const works = [
   {
-    image: "/images/home/1.png",
+    image: `${import.meta.env.BASE_URL}images/home/1.png`,
     name: "Untitled",
     dimensions: "16in × 6in",
     materials: "Elastic bands, card",
     year: "2023"
   },
   {
-    image: "/images/home/2.png",
+    image: `${import.meta.env.BASE_URL}images/home/2.png`,
     name: "Untitled",
     dimensions: "16in × 6in",
     materials: "Elastic bands, card",
     year: "2023"
   },
   {
-    image: "/images/home/3.png",
+    image: `${import.meta.env.BASE_URL}images/home/3.png`,
     name: "Untitled",
     dimensions: "16in × 6in",
     materials: "Elastic bands, card",
