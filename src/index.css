@@ -182,6 +182,10 @@ button {
   margin-top: 4vh;
 }
 
+.homepage-carousel .carousel-item img:hover {
+  opacity: 0.8;
+}
+
 .homepage-carousel .carousel-inner,
 .work-carousel .carousel-inner {
   position: relative;
@@ -210,6 +214,14 @@ button {
 
 .homepage-carousel .carousel-item {
   flex: 0 0 100%;
+}
+
+.homepage-carousel .carousel-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  max-width: 100%;
 }
 
 .homepage-carousel img,
@@ -509,6 +521,14 @@ a.work-gallery__item:hover .work-gallery__name {
   .work-gallery__meta p {
     font-size: var(--text-xs);
   }
+}
+
+.work-details-container {
+  animation: page-fade-in var(--duration-snail) var(--ease) both;
+}
+
+.work-details-container .page {
+  animation: none;
 }
 
 .work-details {

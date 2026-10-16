@@ -1,11 +1,11 @@
 import { Seo } from '../components/Seo'
-import { HomepageCarousel } from '../components/Carousels'
+import { HomepageCarousel, type HomepageImage } from '../components/Carousels'
 import { useState } from 'react'
 
-const images: string[] = [
-  `${import.meta.env.BASE_URL}images/home/1.png`,
-  `${import.meta.env.BASE_URL}images/home/2.png`,
-  `${import.meta.env.BASE_URL}images/home/3.png`,
+const images: HomepageImage[] = [
+  { src: `${import.meta.env.BASE_URL}images/home/1.png`, slug: 'untitled-1' },
+  { src: `${import.meta.env.BASE_URL}images/home/2.png`, slug: 'untitled-2' },
+  { src: `${import.meta.env.BASE_URL}images/home/3.png`, slug: 'untitled-3' },
 ]
 
 export function Home() {

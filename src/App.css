@@ -237,7 +237,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .page,
-  .contact-form {
+  .contact-form,
+  .work-details-container {
     animation: none;
   }
 
@@ -271,7 +272,6 @@
 /* Footer */
 
 .site-footer {
-  border-top: 1px solid var(--color-border);
   min-height: 3rem;
   padding: var(--space-3) var(--content-pad);
   display: grid;

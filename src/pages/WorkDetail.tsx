@@ -40,7 +40,7 @@ export function WorkDetail() {
     return (
       <>
         <Seo title="Work" path={`/work/${slug}`} noIndex />
-        <div className="page-container">
+        <div className="page-container work-details-container">
           <article className="page">
             <p>This work could not be found.</p>
             <p>

@@ -1,4 +1,6 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import { Link } from 'react-router-dom'
+import { getWorkBySlug } from '../data/works'
 
 const AUTOPLAY_MS = 4000
 /** Images visible on a wide page. */
@@ -28,8 +30,14 @@ function visibleCountForPageWidth(pageWidth: number, imageCount: number) {
   return narrowest + Math.ceil(progress * steps)
 }
 
+export type HomepageImage = {
+  src: string
+  /** Work slug this image opens, for example `untitled-1` → `/work/untitled-1`. */
+  slug: string
+}
+
 type HomepageCarouselProps = {
-  images: string[]
+  images: HomepageImage[]
   currentIndex: number
   setCurrentIndex: Dispatch<SetStateAction<number>>
 }
@@ -71,14 +79,16 @@ export function HomepageCarousel({ images, currentIndex, setCurrentIndex }: Home
           className="carousel-track"
           style={{ transform: `translateX(-${safeIndex * 100}%)` }}
         >
-          {images.map((image, index) => (
-            <div className="carousel-item" key={image}>
-              <img
-                src={image}
-                alt={`Homepage work ${index + 1}`}
-              />
-            </div>
-          ))}
+          {images.map((image, index) => {
+            const label = getWorkBySlug(image.slug)?.name ?? `Work ${index + 1}`
+            return (
+              <div className="carousel-item" key={`${image.src}-${image.slug}`}>
+                <Link to={`/work/${image.slug}`} className="carousel-link">
+                  <img src={image.src} alt={label} />
+                </Link>
+              </div>
+            )
+          })}
         </div>
       </div>
       <button

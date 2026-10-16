@@ -31,7 +31,7 @@ export function Layout() {
       <main className="site-main">
         <Outlet />
       </main>
-      {!isHome && <Footer />}
+      <Footer />
     </div>
   )
 }
