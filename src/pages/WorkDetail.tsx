@@ -17,7 +17,10 @@ const customWorkPages = import.meta.glob<WorkPageModule>('./Works/*.tsx', {
 })
 
 function customPageForSlug(slug: string) {
-  const page = customWorkPages[`./Works/${slug}.tsx`]
+  const expected = `./Works/${slug}.tsx`.toLowerCase()
+  const page = Object.entries(customWorkPages).find(
+    ([path]) => path.toLowerCase() === expected,
+  )?.[1]
   if (typeof page?.default === 'function') return page.default
 
   const named = Object.values(page ?? {}).find(

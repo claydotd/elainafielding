@@ -175,17 +175,20 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
     return () => window.clearInterval(id)
   }, [maxStartIndex, safeIndex, setCurrentIndex])
 
+  const canScroll = maxStartIndex > 0
+
   return (
     <div className="work-carousel">
-      <button
-        type="button"
-        className="carousel-prev"
-        onClick={goPrev}
-        aria-label="Previous image"
-        disabled={maxStartIndex === 0}
-      >
-        <i className="fa-solid fa-chevron-left"></i>
-      </button>
+      {canScroll && (
+        <button
+          type="button"
+          className="carousel-prev"
+          onClick={goPrev}
+          aria-label="Previous image"
+        >
+          <i className="fa-solid fa-chevron-left"></i>
+        </button>
+      )}
       <div className="carousel-inner">
         <div
           className="carousel-track"
@@ -202,16 +205,17 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
           ))}
         </div>
       </div>
-      <button
-        type="button"
-        className="carousel-next"
-        onClick={goNext}
-        aria-label="Next image"
-        disabled={maxStartIndex === 0}
-      >
-        <i className="fa-solid fa-chevron-right"></i>
-      </button>
-      {maxStartIndex > 0 && (
+      {canScroll && (
+        <button
+          type="button"
+          className="carousel-next"
+          onClick={goNext}
+          aria-label="Next image"
+        >
+          <i className="fa-solid fa-chevron-right"></i>
+        </button>
+      )}
+      {canScroll && (
         <div className="carousel-dots" role="tablist" aria-label="Carousel slides">
           {Array.from({ length: maxStartIndex + 1 }, (_, index) => (
             <button

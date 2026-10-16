@@ -13,6 +13,10 @@ function homeImage(file: string) {
   return `${import.meta.env.BASE_URL}images/home/${file}`
 }
 
+function workImage(file: string) {
+  return `${import.meta.env.BASE_URL}images/work/${file}`
+}
+
 export const works: WorkItem[] = [
   {
     slug: 'untitled-1',
@@ -21,18 +25,18 @@ export const works: WorkItem[] = [
     dimensions: '16in × 6in',
     materials: 'Elastic bands, card',
     year: '2023',
-    description: 'This is an example description for the work',
+    description: 'This is an example description for the work. Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.',
     images: [
-      homeImage('1-1.png'),
-      homeImage('1-2.png'),
-      homeImage('1-3.png'),
-      homeImage('1-4.png'),
-      homeImage('1-5.png'),
-      homeImage('1-6.png'),
-      homeImage('1-7.png'),
-      homeImage('1-8.png'),
-      homeImage('1-9.png'),
-      homeImage('1-10.png'),
+      homeImage('1.png'),
+      homeImage('2.png'),
+      homeImage('3.png'),
+      homeImage('1.png'),
+      homeImage('2.png'),
+      homeImage('3.png'),
+      homeImage('1.png'),
+      homeImage('2.png'),
+      homeImage('3.png'),
+      homeImage('1.png'),
     ],
   },
   {
@@ -42,6 +46,7 @@ export const works: WorkItem[] = [
     dimensions: '16in × 6in',
     materials: 'Elastic bands, card',
     year: '2023',
+    description: 'Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.',
   },
   {
     slug: 'untitled-3',
