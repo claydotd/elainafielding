@@ -13,9 +13,9 @@ function homeImage(file: string) {
   return `${import.meta.env.BASE_URL}images/home/${file}`
 }
 
-function workImage(file: string) {
-  return `${import.meta.env.BASE_URL}images/work/${file}`
-}
+// function workImage(file: string) {
+//   return `${import.meta.env.BASE_URL}images/work/${file}`
+// }
 
 export const works: WorkItem[] = [
   {
