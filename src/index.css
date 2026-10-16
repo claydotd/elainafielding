@@ -182,10 +182,6 @@ button {
   margin-top: 4vh;
 }
 
-.homepage-carousel .carousel-item img:hover {
-  opacity: 0.8;
-}
-
 .homepage-carousel .carousel-inner,
 .work-carousel .carousel-inner {
   position: relative;
@@ -230,6 +226,11 @@ button {
   max-width: 100%;
   height: 100%;
   object-fit: contain;
+  transition: opacity var(--duration-slow) var(--ease);
+}
+
+.homepage-carousel .carousel-item img:hover {
+  opacity: 0.8;
 }
 
 .carousel-prev,
@@ -451,10 +452,6 @@ a.work-gallery__item:hover .work-gallery__name {
   text-decoration: underline;
 }
 
-.work-gallery__media img:hover {
-  opacity: 0.8;
-}
-
 .work-gallery__media {
   display: flex;
   height: 100%;
@@ -472,6 +469,11 @@ a.work-gallery__item:hover .work-gallery__name {
   height: auto;
   max-height: 50vh;
   object-fit: contain;
+  transition: opacity var(--duration-slow) var(--ease);
+}
+
+.work-gallery__media img:hover {
+  opacity: 0.8;
 }
 
 .work-gallery__meta {

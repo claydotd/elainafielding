@@ -5,7 +5,6 @@ import { Footer } from './Footer'
 
 export function Layout() {
   const { pathname, hash } = useLocation()
-  const isHome = pathname === '/'
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
