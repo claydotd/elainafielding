@@ -4,6 +4,7 @@ export function ContactForm() {
       <h2 id="contact-heading" className="contact-form__title">
         Contact
       </h2>
+      <p>For all inquiries, please use the form below or email me at <a href="mailto:hello@elainafielding.co.uk">hello@elainafielding.co.uk</a></p>
       <form>
         <label className="contact-form__field">
           <span className="contact-form__label">Name</span>

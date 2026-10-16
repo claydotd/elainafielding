@@ -1,19 +1,31 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 
 const AUTOPLAY_MS = 4000
-const MAX_IMAGES_DISPLAYED = 2
+/** Images visible on a wide page. */
+const MAX_IMAGES_DISPLAYED = 4
+/** Images visible at mobile page widths. */
 const MIN_IMAGES_DISPLAYED = 1
-/** Preferred minimum width per visible image; drives how many fit between the arrows. */
-const MIN_ITEM_WIDTH_PX = 360
+/** Mobile breakpoint */
+const MOBILE_BREAKPOINT_PX = 640
+/** Extra page width required before another image is shown. */
+const WIDTH_PER_EXTRA_IMAGE_PX = 280
 
-function visibleCountForWidth(width: number, imageCount: number) {
+function visibleCountForPageWidth(pageWidth: number, imageCount: number) {
   if (imageCount <= 0) return MIN_IMAGES_DISPLAYED
-  const fitted = Math.floor(width / MIN_ITEM_WIDTH_PX)
-  const clamped = Math.min(
-    MAX_IMAGES_DISPLAYED,
-    Math.max(MIN_IMAGES_DISPLAYED, fitted),
-  )
-  return Math.min(clamped, imageCount)
+
+  const widest = Math.min(MAX_IMAGES_DISPLAYED, imageCount)
+  const narrowest = Math.min(Math.max(MIN_IMAGES_DISPLAYED, 1), widest)
+
+  if (pageWidth <= MOBILE_BREAKPOINT_PX) return narrowest
+
+  const steps = widest - narrowest
+  if (steps === 0) return widest
+
+  const desktopWidth = MOBILE_BREAKPOINT_PX + steps * WIDTH_PER_EXTRA_IMAGE_PX
+  if (pageWidth >= desktopWidth) return widest
+
+  const progress = (pageWidth - MOBILE_BREAKPOINT_PX) / (desktopWidth - MOBILE_BREAKPOINT_PX)
+  return narrowest + Math.ceil(progress * steps)
 }
 
 type HomepageCarouselProps = {
@@ -104,63 +116,54 @@ type WorkCarouselProps = {
 
 export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCarouselProps) {
   const count = images.length
-  const innerRef = useRef<HTMLDivElement>(null)
-  const [visibleCount, setVisibleCount] = useState(MIN_IMAGES_DISPLAYED)
+  const [pageWidth, setPageWidth] = useState(() =>
+    typeof window === 'undefined' ? MOBILE_BREAKPOINT_PX + WIDTH_PER_EXTRA_IMAGE_PX : window.innerWidth,
+  )
 
   useEffect(() => {
-    const el = innerRef.current
-    if (!el) return
-
-    const update = () => {
-      setVisibleCount(visibleCountForWidth(el.clientWidth, count))
-    }
-
+    const update = () => setPageWidth(window.innerWidth)
     update()
-    const observer = new ResizeObserver(update)
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [count])
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
+  const visibleCount = visibleCountForPageWidth(pageWidth, count)
   const maxStartIndex = Math.max(0, count - visibleCount)
   const safeIndex = count === 0 ? 0 : Math.min(Math.max(0, currentIndex), maxStartIndex)
+  const slotPercent = 100 / visibleCount
 
   const goTo = (index: number) => {
     if (count === 0) return
-    setCurrentIndex(((index % count) + count) % count)
+    const wrapped = ((index % count) + count) % count
+    setCurrentIndex(Math.min(wrapped, maxStartIndex))
   }
 
-  useEffect(() => {
-    if (currentIndex !== safeIndex) {
-      setCurrentIndex(safeIndex)
-    }
-  }, [currentIndex, safeIndex, setCurrentIndex])
-
   const goPrev = () => {
-    if (count <= visibleCount) return
-    setCurrentIndex(safeIndex <= 0 ? maxStartIndex : safeIndex - 1)
+    if (maxStartIndex === 0) return
+    goTo(safeIndex <= 0 ? maxStartIndex : safeIndex - 1)
   }
 
   const goNext = () => {
-    if (count <= visibleCount) return
-    setCurrentIndex(safeIndex >= maxStartIndex ? 0 : safeIndex + 1)
+    if (maxStartIndex === 0) return
+    goTo(safeIndex >= maxStartIndex ? 0 : safeIndex + 1)
   }
 
   useEffect(() => {
-    if (count <= visibleCount) return
+    if (currentIndex !== safeIndex) setCurrentIndex(safeIndex)
+  }, [currentIndex, safeIndex, setCurrentIndex])
+
+  useEffect(() => {
+    if (maxStartIndex === 0) return
 
     const id = window.setInterval(() => {
       setCurrentIndex((prev) => {
-        const clamped = Math.min(Math.max(0, prev), maxStartIndex)
-        return clamped >= maxStartIndex ? 0 : clamped + 1
+        const start = Math.min(Math.max(0, prev), maxStartIndex)
+        return start >= maxStartIndex ? 0 : start + 1
       })
     }, AUTOPLAY_MS)
 
     return () => window.clearInterval(id)
-  }, [count, visibleCount, maxStartIndex, safeIndex, setCurrentIndex])
-
-  const trackWidthPercent = count === 0 ? 100 : (count / visibleCount) * 100
-  const itemWidthPercent = count === 0 ? 100 : 100 / count
-  const translatePercent = count === 0 ? 0 : (safeIndex * 100) / count
+  }, [maxStartIndex, safeIndex, setCurrentIndex])
 
   return (
     <div className="work-carousel">
@@ -169,23 +172,20 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
         className="carousel-prev"
         onClick={goPrev}
         aria-label="Previous image"
-        disabled={count <= visibleCount}
+        disabled={maxStartIndex === 0}
       >
         <i className="fa-solid fa-chevron-left"></i>
       </button>
-      <div className="carousel-inner" ref={innerRef}>
+      <div className="carousel-inner">
         <div
           className="carousel-track"
-          style={{
-            width: `${trackWidthPercent}%`,
-            transform: `translateX(-${translatePercent}%)`,
-          }}
+          style={{ transform: `translateX(-${safeIndex * slotPercent}%)` }}
         >
           {images.map((image, index) => (
             <div
               className="carousel-item"
-              key={image}
-              style={{ flex: `0 0 ${itemWidthPercent}%` }}
+              key={`${image}-${index}`}
+              style={{ flex: `0 0 ${slotPercent}%`, maxWidth: `${slotPercent}%` }}
             >
               <img src={image} alt={`Work ${index + 1}`} />
             </div>
@@ -197,13 +197,13 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
         className="carousel-next"
         onClick={goNext}
         aria-label="Next image"
-        disabled={count <= visibleCount}
+        disabled={maxStartIndex === 0}
       >
         <i className="fa-solid fa-chevron-right"></i>
       </button>
-      {count > 1 && (
+      {maxStartIndex > 0 && (
         <div className="carousel-dots" role="tablist" aria-label="Carousel slides">
-          {images.map((_, index) => (
+          {Array.from({ length: maxStartIndex + 1 }, (_, index) => (
             <button
               key={index}
               type="button"
