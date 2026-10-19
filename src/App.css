@@ -59,6 +59,7 @@
 
 .nav-link[aria-current='page'] {
   color: var(--color-text);
+  font-weight: 600;
 }
 
 .nav-bar {
@@ -303,6 +304,10 @@
   text-align: right;
 }
 
+.copyright {
+  font-size: var(--text-xs);
+}
+
 .insta-icon {
   display: inline-flex;
   align-items: center;
@@ -412,6 +417,16 @@
     text-align: center;
   }
 
+  .footer-left {
+    order: 1;
+  }
+
+  .footer-right {
+    order: 2;
+  }
+  .footer-center {
+    order: 3;
+  }
   .site-footer p {
     font-size: var(--text-xs);
   }

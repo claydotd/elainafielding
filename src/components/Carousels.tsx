@@ -1,8 +1,8 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction, type TransitionEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { getWorkBySlug } from '../data/works'
 
-const AUTOPLAY_MS = 4000
+const AUTOPLAY_MS = 8000
 /** Images visible on a wide page. */
 const MAX_IMAGES_DISPLAYED = 4
 /** Images visible at mobile page widths. */
@@ -30,6 +30,142 @@ function visibleCountForPageWidth(pageWidth: number, imageCount: number) {
   return narrowest + Math.ceil(progress * steps)
 }
 
+/** Repeated so a wrap can keep moving onto a clone, then snap back with no animation. */
+const LOOP_COPIES = 3
+
+function mod(index: number, count: number) {
+  if (count <= 0) return 0
+  return ((index % count) + count) % count
+}
+
+function repeatSlides<T>(items: T[], copies: number) {
+  if (copies <= 1) return items
+  const slides: T[] = []
+  for (let copy = 0; copy < copies; copy += 1) slides.push(...items)
+  return slides
+}
+
+function useSeamlessTrack(
+  count: number,
+  loop: boolean,
+  currentIndex: number,
+  setCurrentIndex: Dispatch<SetStateAction<number>>,
+  layoutKey: number,
+) {
+  const [position, setPosition] = useState(() => {
+    const start = mod(currentIndex, count)
+    return loop && count > 0 ? count + start : start
+  })
+  const [instant, setInstant] = useState(true)
+  const [offsetPx, setOffsetPx] = useState(0)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const placedRef = useRef(false)
+  const positionRef = useRef(position)
+  positionRef.current = position
+  const logical = mod(position, count)
+  const logicalRef = useRef(logical)
+  logicalRef.current = logical
+
+  const layoutRef = useRef({ count, loop, layoutKey })
+  if (
+    layoutRef.current.count !== count ||
+    layoutRef.current.loop !== loop ||
+    layoutRef.current.layoutKey !== layoutKey
+  ) {
+    layoutRef.current = { count, loop, layoutKey }
+    const kept = mod(logicalRef.current, count)
+    setInstant(true)
+    setPosition(loop && count > 0 ? count + kept : kept)
+  }
+
+  useEffect(() => {
+    if (count === 0 || currentIndex === logical) return
+    setCurrentIndex(logical)
+  }, [count, currentIndex, logical, setCurrentIndex])
+
+  useLayoutEffect(() => {
+    const track = trackRef.current
+    if (!track) return
+
+    const measure = () => {
+      const index = loop ? positionRef.current : 0
+      const slide = track.children.item(index) as HTMLElement | null
+      const next = slide ? slide.offsetLeft - track.offsetLeft : 0
+      setOffsetPx((current) => (current === next ? current : next))
+    }
+
+    measure()
+    placedRef.current = true
+    const width = track.clientWidth
+    const observer = new ResizeObserver(() => {
+      if (track.clientWidth === width) return
+      setInstant(true)
+      measure()
+    })
+    observer.observe(track)
+    return () => observer.disconnect()
+  }, [position, loop, layoutKey, count])
+
+  useEffect(() => {
+    if (!instant || !placedRef.current) return
+    const id = requestAnimationFrame(() => setInstant(false))
+    return () => cancelAnimationFrame(id)
+  }, [instant, offsetPx])
+
+  useEffect(() => {
+    if (!loop || count <= 1) return
+
+    const id = window.setInterval(() => {
+      setInstant(false)
+      setPosition((prev) => prev + 1)
+    }, AUTOPLAY_MS)
+
+    return () => window.clearInterval(id)
+  }, [loop, count, logical])
+
+  const shift = (delta: number) => {
+    if (!loop || count <= 1 || delta === 0) return
+    setInstant(false)
+    setPosition((prev) => {
+      const next = prev + delta
+      const last = count * LOOP_COPIES - 1
+      if (next < 0 || next > last) return count + mod(prev, count) + delta
+      return next
+    })
+  }
+
+  const goTo = (index: number) => {
+    if (count === 0) return
+    const target = mod(index, count)
+    if (!loop) {
+      setPosition(target)
+      return
+    }
+    setInstant(false)
+    setPosition((prev) => prev + (target - mod(prev, count)))
+  }
+
+  const onTransitionEnd = (event: TransitionEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget || event.propertyName !== 'transform' || !loop || count <= 1) return
+    const prev = positionRef.current
+    const canonical = count + mod(prev, count)
+    if (prev === canonical) return
+    setInstant(true)
+    setPosition(canonical)
+  }
+
+  return {
+    position: loop ? position : 0,
+    offsetPx,
+    instant,
+    logical,
+    shift,
+    goTo,
+    onTransitionEnd,
+    trackRef,
+  }
+}
+
 export type HomepageImage = {
   src: string
   /** Work slug this image opens, for example `untitled-1` → `/work/untitled-1`. */
@@ -44,46 +180,33 @@ type HomepageCarouselProps = {
 
 export function HomepageCarousel({ images, currentIndex, setCurrentIndex }: HomepageCarouselProps) {
   const count = images.length
-  const safeIndex = count === 0 ? 0 : ((currentIndex % count) + count) % count
-
-  const goTo = (index: number) => {
-    if (count === 0) return
-    setCurrentIndex(((index % count) + count) % count)
-  }
-
-  const goPrev = () => goTo(safeIndex - 1)
-  const goNext = () => goTo(safeIndex + 1)
-
-  useEffect(() => {
-    if (count <= 1) return
-
-    const id = window.setInterval(() => {
-      setCurrentIndex((prev) => ((prev % count) + 1) % count)
-    }, AUTOPLAY_MS)
-
-    return () => window.clearInterval(id)
-  }, [count, safeIndex, setCurrentIndex])
+  const loop = count > 1
+  const track = useSeamlessTrack(count, loop, currentIndex, setCurrentIndex, 0)
+  const slides = repeatSlides(images, loop ? LOOP_COPIES : 1)
 
   return (
     <div className="homepage-carousel">
       <button
         type="button"
         className="carousel-prev"
-        onClick={goPrev}
+        onClick={() => track.shift(-1)}
         aria-label="Previous image"
       >
         <i className="fa-solid fa-chevron-left"></i>
       </button>
       <div className="carousel-inner">
         <div
-          className="carousel-track"
-          style={{ transform: `translateX(-${safeIndex * 100}%)` }}
+          ref={track.trackRef}
+          className={`carousel-track${track.instant ? ' carousel-track--instant' : ''}`}
+          style={{ transform: `translate3d(-${track.offsetPx}px, 0, 0)` }}
+          onTransitionEnd={track.onTransitionEnd}
         >
-          {images.map((image, index) => {
-            const label = getWorkBySlug(image.slug)?.name ?? `Work ${index + 1}`
+          {slides.map((image, index) => {
+            const label = getWorkBySlug(image.slug)?.name ?? `Work ${mod(index, count) + 1}`
+            const hidden = index < track.position - 1 || index > track.position + 1
             return (
-              <div className="carousel-item" key={`${image.src}-${image.slug}`}>
-                <Link to={`/work/${image.slug}`} className="carousel-link">
+              <div className="carousel-item" key={`${image.src}-${image.slug}-${index}`} aria-hidden={hidden}>
+                <Link to={`/work/${image.slug}`} className="carousel-link" tabIndex={hidden ? -1 : undefined}>
                   <img src={image.src} alt={label} />
                 </Link>
               </div>
@@ -94,7 +217,7 @@ export function HomepageCarousel({ images, currentIndex, setCurrentIndex }: Home
       <button
         type="button"
         className="carousel-next"
-        onClick={goNext}
+        onClick={() => track.shift(1)}
         aria-label="Next image"
       >
         <i className="fa-solid fa-chevron-right"></i>
@@ -106,10 +229,10 @@ export function HomepageCarousel({ images, currentIndex, setCurrentIndex }: Home
               key={index}
               type="button"
               role="tab"
-              className={`carousel-dot${index === safeIndex ? ' is-active' : ''}`}
+              className={`carousel-dot${index === track.logical ? ' is-active' : ''}`}
               aria-label={`Go to image ${index + 1}`}
-              aria-selected={index === safeIndex}
-              onClick={() => goTo(index)}
+              aria-selected={index === track.logical}
+              onClick={() => track.goTo(index)}
             />
           ))}
         </div>
@@ -138,44 +261,10 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
   }, [])
 
   const visibleCount = visibleCountForPageWidth(pageWidth, count)
-  const maxStartIndex = Math.max(0, count - visibleCount)
-  const safeIndex = count === 0 ? 0 : Math.min(Math.max(0, currentIndex), maxStartIndex)
+  const canScroll = count > visibleCount
   const slotPercent = 100 / visibleCount
-
-  const goTo = (index: number) => {
-    if (count === 0) return
-    const wrapped = ((index % count) + count) % count
-    setCurrentIndex(Math.min(wrapped, maxStartIndex))
-  }
-
-  const goPrev = () => {
-    if (maxStartIndex === 0) return
-    goTo(safeIndex <= 0 ? maxStartIndex : safeIndex - 1)
-  }
-
-  const goNext = () => {
-    if (maxStartIndex === 0) return
-    goTo(safeIndex >= maxStartIndex ? 0 : safeIndex + 1)
-  }
-
-  useEffect(() => {
-    if (currentIndex !== safeIndex) setCurrentIndex(safeIndex)
-  }, [currentIndex, safeIndex, setCurrentIndex])
-
-  useEffect(() => {
-    if (maxStartIndex === 0) return
-
-    const id = window.setInterval(() => {
-      setCurrentIndex((prev) => {
-        const start = Math.min(Math.max(0, prev), maxStartIndex)
-        return start >= maxStartIndex ? 0 : start + 1
-      })
-    }, AUTOPLAY_MS)
-
-    return () => window.clearInterval(id)
-  }, [maxStartIndex, safeIndex, setCurrentIndex])
-
-  const canScroll = maxStartIndex > 0
+  const track = useSeamlessTrack(count, canScroll, currentIndex, setCurrentIndex, visibleCount)
+  const slides = repeatSlides(images, canScroll ? LOOP_COPIES : 1)
 
   return (
     <div className="work-carousel">
@@ -183,7 +272,7 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
         <button
           type="button"
           className="carousel-prev"
-          onClick={goPrev}
+          onClick={() => track.shift(-1)}
           aria-label="Previous image"
         >
           <i className="fa-solid fa-chevron-left"></i>
@@ -191,25 +280,31 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
       )}
       <div className="carousel-inner">
         <div
-          className="carousel-track"
-          style={{ transform: `translateX(-${safeIndex * slotPercent}%)` }}
+          ref={track.trackRef}
+          className={`carousel-track${track.instant ? ' carousel-track--instant' : ''}`}
+          style={{ transform: `translate3d(-${track.offsetPx}px, 0, 0)` }}
+          onTransitionEnd={track.onTransitionEnd}
         >
-          {images.map((image, index) => (
-            <div
-              className="carousel-item"
-              key={`${image}-${index}`}
-              style={{ flex: `0 0 ${slotPercent}%`, maxWidth: `${slotPercent}%` }}
-            >
-              <img src={image} alt={`Work ${index + 1}`} />
-            </div>
-          ))}
+          {slides.map((image, index) => {
+            const hidden = index < track.position - 1 || index > track.position + visibleCount
+            return (
+              <div
+                className="carousel-item"
+                key={`${image}-${index}`}
+                style={{ flex: `0 0 ${slotPercent}%`, maxWidth: `${slotPercent}%` }}
+                aria-hidden={hidden}
+              >
+                <img src={image} alt={`Work ${mod(index, count) + 1}`} />
+              </div>
+            )
+          })}
         </div>
       </div>
       {canScroll && (
         <button
           type="button"
           className="carousel-next"
-          onClick={goNext}
+          onClick={() => track.shift(1)}
           aria-label="Next image"
         >
           <i className="fa-solid fa-chevron-right"></i>
@@ -217,15 +312,15 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
       )}
       {canScroll && (
         <div className="carousel-dots" role="tablist" aria-label="Carousel slides">
-          {Array.from({ length: maxStartIndex + 1 }, (_, index) => (
+          {images.map((_, index) => (
             <button
               key={index}
               type="button"
               role="tab"
-              className={`carousel-dot${index === safeIndex ? ' is-active' : ''}`}
+              className={`carousel-dot${index === track.logical ? ' is-active' : ''}`}
               aria-label={`Go to image ${index + 1}`}
-              aria-selected={index === safeIndex}
-              onClick={() => goTo(index)}
+              aria-selected={index === track.logical}
+              onClick={() => track.goTo(index)}
             />
           ))}
         </div>
