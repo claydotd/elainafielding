@@ -1,11 +1,52 @@
+import { useState, type FormEvent } from 'react'
+
 export function ContactForm() {
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = event.currentTarget
+    setStatus('sending')
+
+    try {
+      const params = new URLSearchParams()
+      new FormData(form).forEach((value, key) => {
+        params.append(key, String(value))
+      })
+      const response = await fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+      })
+
+      if (!response.ok) throw new Error('Form submission failed')
+
+      form.reset()
+      setStatus('sent')
+    } catch {
+      setStatus('error')
+    }
+  }
+
   return (
     <section id="contact" className="contact-form" aria-labelledby="contact-heading">
       <h2 id="contact-heading" className="contact-form__title">
         Contact
       </h2>
       <p>For all inquiries, please use the form below or email me at <a href="mailto:hello@elainafielding.co.uk">hello@elainafielding.co.uk</a></p>
-      <form>
+      <form
+        name="contact"
+        method="POST"
+        data-netlify="true"
+        data-netlify-honeypot="bot-field"
+        onSubmit={handleSubmit}
+      >
+        <input type="hidden" name="form-name" value="contact" />
+        <p hidden>
+          <label>
+            Don’t fill this out if you’re human: <input name="bot-field" />
+          </label>
+        </p>
         <label className="contact-form__field">
           <span className="contact-form__label">Name</span>
           <input type="text" name="name" autoComplete="name" required />
@@ -31,7 +72,17 @@ export function ContactForm() {
           <span className="contact-form__label">Message</span>
           <textarea name="message" rows={5} required />
         </label>
-        <button type="submit">Send</button>
+        <button type="submit" disabled={status === 'sending'}>
+          {status === 'sending' ? 'Sending…' : 'Send'}
+        </button>
+        {status === 'sent' ? (
+          <p role="status">Thanks, your message has been sent.</p>
+        ) : null}
+        {status === 'error' ? (
+          <p role="alert">
+            Something went wrong. Please email hello@elainafielding.co.uk instead.
+          </p>
+        ) : null}
       </form>
     </section>
   )

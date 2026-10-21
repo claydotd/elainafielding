@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 
 /** Flip this to demo nav layouts: 'stacked' | 'logo-centered' | 'standard' */
-const navVariant: 'stacked' | 'logo-centered' | 'standard' = 'logo-centered'
+const navVariant: 'stacked' | 'logo-centered' | 'standard' = 'stacked'
 
 const links: { to: string; label: string; end?: boolean }[] = [
   { to: '/work', label: 'Work' },

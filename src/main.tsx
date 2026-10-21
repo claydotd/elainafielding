@@ -8,7 +8,9 @@ import './index.css'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HelmetProvider>
-      <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+      <BrowserRouter
+        basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined}
+      >
         <App />
       </BrowserRouter>
     </HelmetProvider>

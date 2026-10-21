@@ -1,22 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://claydotd.github.io/elainafielding/</loc>
+    <loc>https://elainafielding.co.uk/</loc>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://claydotd.github.io/elainafielding/work</loc>
+    <loc>https://elainafielding.co.uk/work</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://claydotd.github.io/elainafielding/about</loc>
+    <loc>https://elainafielding.co.uk/work/untitled-1</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://elainafielding.co.uk/work/untitled-2</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://elainafielding.co.uk/work/untitled-3</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://elainafielding.co.uk/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://claydotd.github.io/elainafielding/shop</loc>
+    <loc>https://elainafielding.co.uk/shop</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>

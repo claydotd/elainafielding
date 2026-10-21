@@ -31,6 +31,20 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Static copy so Netlify can detect the client-rendered contact form. -->
+    <form name="contact" netlify netlify-honeypot="bot-field" hidden>
+      <input name="bot-field" />
+      <input type="text" name="name" />
+      <input type="email" name="email" />
+      <select name="message-about">
+        <option value="commission">Commission</option>
+        <option value="collaboration">Collaboration</option>
+        <option value="workshop">Workshop</option>
+        <option value="shop-order">Shop Order</option>
+        <option value="other">Other</option>
+      </select>
+      <textarea name="message"></textarea>
+    </form>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

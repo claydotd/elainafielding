@@ -1,7 +1,9 @@
 import { Helmet } from 'react-helmet-async'
 
 const SITE_NAME = 'Elaina Fielding'
-const SITE_URL = 'https://claydotd.github.io/elainafielding'
+const SITE_URL = (
+  import.meta.env.VITE_SITE_URL || 'https://elainafielding.co.uk'
+).replace(/\/$/, '')
 const DEFAULT_DESCRIPTION =
   'Elaina Fielding | Artist'
 

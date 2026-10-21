@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://claydotd.github.io/elainafielding/sitemap.xml
+Sitemap: https://elainafielding.co.uk/sitemap.xml

@@ -342,6 +342,25 @@
 }
 
 @media (max-width: 640px) {
+  .nav--stacked .nav-bar {
+    display: grid;
+    grid-template-columns: 2.75rem 1fr 2.75rem;
+    align-items: center;
+    gap: 0;
+  }
+
+  .nav--stacked .nav-brand {
+    grid-column: 2;
+    justify-self: center;
+    text-align: center;
+  }
+
+  .nav--stacked .nav-bar-end {
+    grid-column: 3;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
   .nav--logo-centered .nav-bar {
     grid-template-columns: 2.75rem 1fr 2.75rem;
     gap: 0;
