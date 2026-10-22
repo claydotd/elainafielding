@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { HelmetProvider } from 'react-helmet-async'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
+import { WorksProvider } from './context/WorksContext'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
@@ -11,7 +12,9 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter
         basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined}
       >
-        <App />
+        <WorksProvider>
+          <App />
+        </WorksProvider>
       </BrowserRouter>
     </HelmetProvider>
   </StrictMode>,

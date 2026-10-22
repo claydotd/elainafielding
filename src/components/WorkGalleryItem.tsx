@@ -1,35 +1,67 @@
 import { Link } from 'react-router-dom'
+import type { WorkPiece } from '../data/works'
+
+type WorkMetaProps = {
+  pieces: WorkPiece[]
+  location?: string
+  heading?: 'h1' | 'h2'
+}
+
+export function WorkMeta({ pieces, location, heading = 'h2' }: WorkMetaProps) {
+  const Heading = heading
+  const visible = pieces.filter((piece) => piece.title || piece.subtitle || piece.materials || piece.dimensions || piece.year)
+  if (visible.length === 0 && !location) return null
+
+  return (
+    <div className="work-gallery__meta">
+      {visible.map((piece, index) => (
+        <div className="work-gallery__piece" key={`${piece.title}-${piece.year}-${index}`}>
+          {piece.title || piece.year ? (
+            index === 0
+              ? <Heading className="work-gallery__name">{pieceLabel(piece)}</Heading>
+              : <p className="work-gallery__name">{pieceLabel(piece)}</p>
+          ) : null}
+          {piece.subtitle ? <p className="work-gallery__subtitle">{piece.subtitle}</p> : null}
+          {piece.materials ? <p className="work-gallery__materials">{piece.materials}</p> : null}
+          {piece.dimensions ? <p className="work-gallery__dimensions">{piece.dimensions}</p> : null}
+        </div>
+      ))}
+      {location ? <p className="work-gallery__location">{location}</p> : null}
+    </div>
+  )
+}
+
+function pieceLabel(piece: WorkPiece) {
+  if (piece.title && piece.year) return `${piece.title} (${piece.year})`
+  if (piece.title) return piece.title
+  return `(${piece.year})`
+}
 
 type WorkGalleryItemProps = {
+  id?: string
   image: string
   name: string
-  dimensions: string
-  materials: string
-  year: string
+  pieces: WorkPiece[]
+  location?: string
   to: string
   alt?: string
 }
 
 export function WorkGalleryItem({
+  id,
   image,
   name,
-  dimensions,
-  materials,
-  year,
+  pieces,
+  location,
   to,
   alt,
 }: WorkGalleryItemProps) {
   return (
-    <Link to={to} className="work-gallery__item">
+    <Link to={to} id={id} className="work-gallery__item">
       <div className="work-gallery__media">
-        <img src={image} alt={alt ?? name} />
+        {image ? <img src={image} alt={alt ?? name} /> : <div className="work-gallery__fallback" role="img" aria-label={alt ?? name} />}
       </div>
-      <div className="work-gallery__meta">
-        <h2 className="work-gallery__name">{name}</h2>
-        <p className="work-gallery__materials">{materials}</p>
-        <p className="work-gallery__dimensions">{dimensions}</p>
-        <p className="work-gallery__year">{year}</p>
-      </div>
+      <WorkMeta pieces={pieces} location={location} />
     </Link>
   )
 }

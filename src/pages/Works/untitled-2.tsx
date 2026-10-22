@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { WorkCarousel } from '../../components/Carousels'
+import { WorkMeta } from '../../components/WorkGalleryItem'
+import { BackToWork, WorkNeighbors } from '../../components/WorkDetailsTemplate'
 import { Seo } from '../../components/Seo'
-import { getWorkBySlug } from '../../data/works'
+import { useWorks } from '../../context/useWorks'
+import { workPieces, workSummary } from '../../data/works'
 
 function homeImage(file: string) {
   return `${import.meta.env.BASE_URL}images/home/${file}`
@@ -51,7 +53,8 @@ const steps: ScrollStep[] = [
 const carouselImages = [homeImage('1.png'), homeImage('2.png'), homeImage('3.png')]
 
 export default function UntitledTwoPage() {
-  const work = getWorkBySlug('untitled-2')
+  const { works } = useWorks()
+  const work = works.find((item) => item.slug === 'untitled-2')
   const title = work?.name ?? 'Untitled 2'
   const [activeIndex, setActiveIndex] = useState(0)
   const [carouselIndex, setCarouselIndex] = useState(0)
@@ -94,24 +97,17 @@ export default function UntitledTwoPage() {
       <Seo
         title={title}
         path="/work/untitled-2"
-        description={work?.description ?? `${title}, ${work?.year ?? ''}. ${work?.materials ?? ''}.`}
+        description={work?.description ?? workSummary(work ?? { name: title, year: '', materials: '', dimensions: '' })}
       />
       <div className="page-container work-details-container">
-        <div className="back-link">
-          <Link to="/work">← Back to work</Link>
-        </div>
+        <BackToWork slug="untitled-2" />
         <article className="scroll-story">
           <div className="scroll-story__text">
-            <header className="work-gallery__meta">
-              <h1 className="work-gallery__name">{title}</h1>
-              {work ? (
-                <>
-                  <p className="work-gallery__materials">{work.materials}</p>
-                  <p className="work-gallery__dimensions">{work.dimensions}</p>
-                  <p className="work-gallery__year">{work.year}</p>
-                </>
-              ) : null}
-            </header>
+            <WorkMeta
+              heading="h1"
+              pieces={work ? workPieces(work) : [{ title, year: '', materials: '', dimensions: '' }]}
+              location={work?.location}
+            />
             {steps.map((step, index) => (
               <section
                 key={step.alt}
@@ -150,6 +146,7 @@ export default function UntitledTwoPage() {
             />
           </div>
         ) : null}
+        <WorkNeighbors slug="untitled-2" />
       </div>
     </>
   )

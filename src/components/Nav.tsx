@@ -205,7 +205,7 @@ export function Nav() {
     ) : (
       <>
         <NavLink to="/" className="nav-brand" end onClick={closeMenu}>
-          Elaina Fielding
+          Elaina<br/>Fielding
         </NavLink>
         <div className="nav-bar-end">
           <LinkList

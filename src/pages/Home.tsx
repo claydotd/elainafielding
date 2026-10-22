@@ -1,15 +1,28 @@
-import { Seo } from '../components/Seo'
+import { useEffect, useState } from 'react'
 import { HomepageCarousel, type HomepageImage } from '../components/Carousels'
-import { useState } from 'react'
+import { Seo } from '../components/Seo'
+import { homepageSeed } from '../data/homepage'
+import { fetchHomepage } from '../lib/homepage'
 
-const images: HomepageImage[] = [
-  { src: `${import.meta.env.BASE_URL}images/home/1.png`, slug: 'untitled-1' },
-  { src: `${import.meta.env.BASE_URL}images/home/2.png`, slug: 'untitled-2' },
-  { src: `${import.meta.env.BASE_URL}images/home/3.png`, slug: 'untitled-3' },
-]
+const fallback: HomepageImage[] = homepageSeed.map((slide) => ({
+  src: slide.image,
+  slug: slide.slug,
+}))
 
 export function Home() {
+  const [images, setImages] = useState<HomepageImage[] | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchHomepage().then((slides) => {
+      if (cancelled) return
+      setImages(slides ? slides.map((slide) => ({ src: slide.image, slug: slide.slug })) : fallback)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <>
@@ -18,8 +31,10 @@ export function Home() {
         description="Elaina Fielding | Artist"
       />
       <article className="page">
-        {/* Image Carousel */}
-        <HomepageCarousel images={images} currentIndex={currentIndex} setCurrentIndex={setCurrentIndex} />
+        {images == null ? <div className="homepage-carousel" aria-hidden="true" /> : null}
+        {images && images.length > 0 ? (
+          <HomepageCarousel images={images} currentIndex={currentIndex} setCurrentIndex={setCurrentIndex} />
+        ) : null}
       </article>
     </>
   )

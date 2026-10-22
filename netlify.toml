@@ -7,6 +7,21 @@
   # Override in the Netlify UI if the live domain is different.
   VITE_SITE_URL = "https://elainafielding.co.uk"
 
+[dev]
+  # #custom keeps the dev proxy from rewriting Vite modules to index.html.
+  # The dev script is `netlify dev`, so the command here must stay the Vite server.
+  framework = "#custom"
+  command = "npm run dev:vite"
+  targetPort = 5173
+  port = 8888
+  autoLaunch = false
+
+# Keep API routes on the function. This must stay above the SPA fallback.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
 # Client-side routes such as /work and /about. Existing files are served first.
 [[redirects]]
   from = "/*"

@@ -2,7 +2,8 @@ import type { ComponentType } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { WorkDetailsTemplate } from '../components/WorkDetailsTemplate'
-import { getWorkBySlug } from '../data/works'
+import { useWorks } from '../context/useWorks'
+import { workPieces, workSummary } from '../data/works'
 
 type WorkPageModule = {
   default?: ComponentType
@@ -31,13 +32,14 @@ function customPageForSlug(slug: string) {
 
 export function WorkDetail() {
   const { slug = '' } = useParams()
+  const { works } = useWorks()
   const CustomPage = customPageForSlug(slug)
 
   if (CustomPage) {
     return <CustomPage />
   }
 
-  const work = getWorkBySlug(slug)
+  const work = works.find((item) => item.slug === slug)
 
   if (!work) {
     return (
@@ -60,17 +62,14 @@ export function WorkDetail() {
       <Seo
         title={work.name}
         path={`/work/${work.slug}`}
-        description={
-          work.description ??
-          `${work.name}, ${work.year}. ${work.materials}.`
-        }
+        description={work.description ?? workSummary(work)}
       />
       <div className="page-container">
         <WorkDetailsTemplate
+          slug={work.slug}
           title={work.name}
-          dimensions={work.dimensions}
-          materials={work.materials}
-          year={work.year}
+          pieces={workPieces(work)}
+          location={work.location}
           description={work.description ?? ''}
           image={work.image}
           images={work.images ?? []}

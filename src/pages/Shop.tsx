@@ -13,7 +13,7 @@ export function Shop() {
         <article className="page">
           <div className="shop-content">
             <p>Coming soon.</p>
-            <p>In the meantime, please <Link to="/about#contact">contact me</Link> if you would like to purchase a piece.</p>
+            <p>In the meantime, please <Link to="/about#contact">contact me</Link> for purchase inquiries.</p>
           </div>
         </article>
       </div>

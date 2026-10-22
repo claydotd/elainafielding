@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction, type TransitionEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { getWorkBySlug } from '../data/works'
+import { useWorks } from '../context/useWorks'
 
 const AUTOPLAY_MS = 8000
 /** Images visible on a wide page. */
@@ -63,17 +63,16 @@ function useSeamlessTrack(
   const positionRef = useRef(position)
   positionRef.current = position
   const logical = mod(position, count)
-  const logicalRef = useRef(logical)
-  logicalRef.current = logical
-
   const layoutRef = useRef({ count, loop, layoutKey })
   if (
     layoutRef.current.count !== count ||
     layoutRef.current.loop !== loop ||
     layoutRef.current.layoutKey !== layoutKey
   ) {
+    // Position points into the repeated track. Read it with the previous
+    // count so a longer list does not turn the first slide into the last.
+    const kept = mod(position, layoutRef.current.count)
     layoutRef.current = { count, loop, layoutKey }
-    const kept = mod(logicalRef.current, count)
     setInstant(true)
     setPosition(loop && count > 0 ? count + kept : kept)
   }
@@ -179,6 +178,7 @@ type HomepageCarouselProps = {
 }
 
 export function HomepageCarousel({ images, currentIndex, setCurrentIndex }: HomepageCarouselProps) {
+  const { works } = useWorks()
   const count = images.length
   const loop = count > 1
   const track = useSeamlessTrack(count, loop, currentIndex, setCurrentIndex, 0)
@@ -202,7 +202,7 @@ export function HomepageCarousel({ images, currentIndex, setCurrentIndex }: Home
           onTransitionEnd={track.onTransitionEnd}
         >
           {slides.map((image, index) => {
-            const label = getWorkBySlug(image.slug)?.name ?? `Work ${mod(index, count) + 1}`
+            const label = works.find((work) => work.slug === image.slug)?.name ?? `Work ${mod(index, count) + 1}`
             const hidden = index < track.position - 1 || index > track.position + 1
             return (
               <div className="carousel-item" key={`${image.src}-${image.slug}-${index}`} aria-hidden={hidden}>
