@@ -21,6 +21,7 @@
   --font-display: "artigo", serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
+  --text-2xs: 0.6rem;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -546,7 +547,7 @@ a.work-gallery__item:hover .work-gallery__name {
 .work-gallery__materials,
 .work-gallery__location {
   font-size: var(--text-sm);
-  line-height: var(--leading-relaxed);
+  line-height: var(--leading-tight);
   color: var(--color-text-muted);
 }
 
@@ -574,6 +575,18 @@ a.work-gallery__item:hover .work-gallery__name {
 
   .work-gallery__meta p:not(.work-gallery__name) {
     font-size: var(--text-xs);
+  }
+}
+
+@media (max-width: 480px) {
+  .work-gallery__meta h1,
+  .work-gallery__meta h2,
+  .work-gallery__meta .work-gallery__name {
+    font-size: var(--text-xs);
+  }
+
+  .work-gallery__meta p:not(.work-gallery__name) {
+    font-size: var(--text-2xs);
   }
 }
 
