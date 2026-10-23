@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useWorks } from '../context/useWorks'
 import type { WorkItem, WorkPiece } from '../data/works'
 import { workListHref } from '../lib/work-list'
+import { fittedImage } from '../lib/fitted-image'
 import { WorkCarousel } from './Carousels'
 import { WorkMeta } from './WorkGalleryItem'
 
@@ -50,7 +51,13 @@ export function WorkDetailsTemplate({ slug, title, pieces, location, description
       <article className="work-details">
         {image ? (
           <div className="work-details__media">
-            <img src={image} alt={title} />
+            <img
+              {...fittedImage(image, 'hero', '(max-width: 640px) 66vw, 55vw')}
+              alt={title}
+              decoding="async"
+              loading="eager"
+              fetchPriority="high"
+            />
           </div>
         ) : null}
         <div className="work-details__text">

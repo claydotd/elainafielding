@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { WorkPiece } from '../data/works'
+import { fittedImage } from '../lib/fitted-image'
 
 type WorkMetaProps = {
   pieces: WorkPiece[]
@@ -45,6 +46,7 @@ type WorkGalleryItemProps = {
   location?: string
   to: string
   alt?: string
+  priority?: boolean
 }
 
 export function WorkGalleryItem({
@@ -55,11 +57,22 @@ export function WorkGalleryItem({
   location,
   to,
   alt,
+  priority = false,
 }: WorkGalleryItemProps) {
   return (
     <Link to={to} id={id} className="work-gallery__item">
       <div className="work-gallery__media">
-        {image ? <img src={image} alt={alt ?? name} /> : <div className="work-gallery__fallback" role="img" aria-label={alt ?? name} />}
+        {image ? (
+          <img
+            {...fittedImage(image, 'gallery')}
+            alt={alt ?? name}
+            decoding="async"
+            loading={priority ? 'eager' : 'lazy'}
+            fetchPriority={priority ? 'high' : 'auto'}
+          />
+        ) : (
+          <div className="work-gallery__fallback" role="img" aria-label={alt ?? name} />
+        )}
       </div>
       <WorkMeta pieces={pieces} location={location} />
     </Link>

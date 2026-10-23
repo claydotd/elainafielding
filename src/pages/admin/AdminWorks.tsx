@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Seo } from '../../components/Seo'
+import { Icon } from '../../components/Icon'
 import { useWorks } from '../../context/useWorks'
 import type { WorkItem } from '../../data/works-seed'
 import { workPieces } from '../../data/works'
@@ -109,7 +110,7 @@ function WorksList() {
                     setDropIndex(null)
                   }}
                 >
-                  <i className="fa-solid fa-grip-lines" aria-hidden="true" />
+                  <Icon name="grip" />
                 </button>
                 {work.image ? <img src={work.image} alt="" /> : <span className="admin-thumb" />}
                 <Link to={`/admin/works/${work.slug}`}>
@@ -124,7 +125,7 @@ function WorksList() {
                     disabled={saving || index === 0}
                     onClick={() => move(index, index - 1)}
                   >
-                    <i className="fa-solid fa-chevron-up" aria-hidden="true" />
+                    <Icon name="chevron-up" />
                   </button>
                   <button
                     type="button"
@@ -133,7 +134,7 @@ function WorksList() {
                     disabled={saving || index === items.length - 1}
                     onClick={() => move(index, index + 1)}
                   >
-                    <i className="fa-solid fa-chevron-down" aria-hidden="true" />
+                    <Icon name="chevron-down" />
                   </button>
                 </div>
               </li>

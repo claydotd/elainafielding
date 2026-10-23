@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction, type TransitionEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useWorks } from '../context/useWorks'
+import { carouselSizes, fittedImage } from '../lib/fitted-image'
+import { Icon } from './Icon'
 
 const AUTOPLAY_MS = 8000
 /** Images visible on a wide page. */
@@ -192,7 +194,7 @@ export function HomepageCarousel({ images, currentIndex, setCurrentIndex }: Home
         onClick={() => track.shift(-1)}
         aria-label="Previous image"
       >
-        <i className="fa-solid fa-chevron-left"></i>
+        <Icon name="chevron-left" />
       </button>
       <div className="carousel-inner">
         <div
@@ -204,10 +206,19 @@ export function HomepageCarousel({ images, currentIndex, setCurrentIndex }: Home
           {slides.map((image, index) => {
             const label = works.find((work) => work.slug === image.slug)?.name ?? `Work ${mod(index, count) + 1}`
             const hidden = index < track.position - 1 || index > track.position + 1
+            const current = index === track.position
             return (
               <div className="carousel-item" key={`${image.src}-${image.slug}-${index}`} aria-hidden={hidden}>
                 <Link to={`/work/${image.slug}`} className="carousel-link" tabIndex={hidden ? -1 : undefined}>
-                  <img src={image.src} alt={label} />
+                  {hidden ? null : (
+                    <img
+                      {...fittedImage(image.src, 'hero')}
+                      alt={label}
+                      decoding="async"
+                      loading="eager"
+                      fetchPriority={current ? 'high' : 'low'}
+                    />
+                  )}
                 </Link>
               </div>
             )
@@ -220,7 +231,7 @@ export function HomepageCarousel({ images, currentIndex, setCurrentIndex }: Home
         onClick={() => track.shift(1)}
         aria-label="Next image"
       >
-        <i className="fa-solid fa-chevron-right"></i>
+        <Icon name="chevron-right" />
       </button>
       {count > 1 && (
         <div className="carousel-dots" role="tablist" aria-label="Carousel slides">
@@ -275,7 +286,7 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
           onClick={() => track.shift(-1)}
           aria-label="Previous image"
         >
-          <i className="fa-solid fa-chevron-left"></i>
+          <Icon name="chevron-left" />
         </button>
       )}
       <div className="carousel-inner">
@@ -294,7 +305,14 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
                 style={{ flex: `0 0 ${slotPercent}%`, maxWidth: `${slotPercent}%` }}
                 aria-hidden={hidden}
               >
-                <img src={image} alt={`Work ${mod(index, count) + 1}`} />
+                {hidden ? null : (
+                  <img
+                    {...fittedImage(image, 'carousel', carouselSizes(visibleCount))}
+                    alt={`Work ${mod(index, count) + 1}`}
+                    decoding="async"
+                    loading="eager"
+                  />
+                )}
               </div>
             )
           })}
@@ -307,7 +325,7 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
           onClick={() => track.shift(1)}
           aria-label="Next image"
         >
-          <i className="fa-solid fa-chevron-right"></i>
+          <Icon name="chevron-right" />
         </button>
       )}
       {canScroll && (

@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Seo } from '../../components/Seo'
+import { Icon } from '../../components/Icon'
 import { useWorks } from '../../context/useWorks'
 import type { WorkItem } from '../../data/works-seed'
 import { workPieces } from '../../data/works'
@@ -316,7 +317,7 @@ function Editor() {
                           setPieceDropIndex(null)
                         }}
                       >
-                        <i className="fa-solid fa-grip-lines" aria-hidden="true" />
+                        <Icon name="grip" />
                       </button>
                       <button
                         type="button"
@@ -337,7 +338,7 @@ function Editor() {
                           disabled={index === 0}
                           onClick={() => applyPieces(moveItem(draft.pieces, index, index - 1))}
                         >
-                          <i className="fa-solid fa-chevron-up" aria-hidden="true" />
+                          <Icon name="chevron-up" />
                         </button>
                         <button
                           type="button"
@@ -346,7 +347,7 @@ function Editor() {
                           disabled={index === draft.pieces.length - 1}
                           onClick={() => applyPieces(moveItem(draft.pieces, index, index + 1))}
                         >
-                          <i className="fa-solid fa-chevron-down" aria-hidden="true" />
+                          <Icon name="chevron-down" />
                         </button>
                         {draft.pieces.length > 1 ? (
                           <button
@@ -498,7 +499,7 @@ function Editor() {
                           setDropIndex(null)
                         }}
                       >
-                        <i className="fa-solid fa-grip-lines" aria-hidden="true" />
+                        <Icon name="grip" />
                       </button>
                       <img src={image} alt="" />
                       <span>Image {index + 1}</span>
@@ -510,7 +511,7 @@ function Editor() {
                           disabled={busy || index === 0}
                           onClick={() => updateDraft({ images: moveItem(draft.images, index, index - 1) })}
                         >
-                          <i className="fa-solid fa-chevron-up" aria-hidden="true" />
+                          <Icon name="chevron-up" />
                         </button>
                         <button
                           type="button"
@@ -519,7 +520,7 @@ function Editor() {
                           disabled={busy || index === draft.images.length - 1}
                           onClick={() => updateDraft({ images: moveItem(draft.images, index, index + 1) })}
                         >
-                          <i className="fa-solid fa-chevron-down" aria-hidden="true" />
+                          <Icon name="chevron-down" />
                         </button>
                         <button
                           type="button"

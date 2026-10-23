@@ -5,6 +5,7 @@ import { BackToWork, WorkNeighbors } from '../../components/WorkDetailsTemplate'
 import { Seo } from '../../components/Seo'
 import { useWorks } from '../../context/useWorks'
 import { workPieces, workSummary } from '../../data/works'
+import { fittedImage } from '../../lib/fitted-image'
 
 function homeImage(file: string) {
   return `${import.meta.env.BASE_URL}images/home/${file}`
@@ -128,10 +129,12 @@ export default function UntitledTwoPage() {
               {steps.map((step, index) => (
                 <img
                   key={`${step.image}-${index}`}
-                  src={step.image}
+                  {...fittedImage(step.image, 'hero', '(max-width: 640px) 100vw, 50vw')}
                   alt={step.alt}
                   className={index === activeIndex ? 'is-active' : undefined}
                   aria-hidden={index === activeIndex ? undefined : true}
+                  decoding="async"
+                  loading={index === activeIndex ? 'eager' : 'lazy'}
                 />
               ))}
             </div>

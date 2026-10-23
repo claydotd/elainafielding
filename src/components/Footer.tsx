@@ -1,4 +1,5 @@
 import { useLocation } from 'react-router-dom';
+import { Icon } from './Icon'
 
 export function Footer() {
   const location = useLocation();
@@ -16,7 +17,7 @@ export function Footer() {
         }          
         </div>
       <div className="footer-right">
-        <a className="insta-icon"href="https://www.instagram.com/elainafielding/" target="_blank" rel="noopener noreferrer"><i className="fa-brands fa-instagram"></i></a>
+        <a className="insta-icon" href="https://www.instagram.com/elainafielding/" target="_blank" rel="noopener noreferrer"><Icon name="instagram" /></a>
       </div>
     </footer>
   )

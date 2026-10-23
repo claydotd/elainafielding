@@ -1,5 +1,6 @@
 import { Seo } from '../components/Seo'
 import { ContactForm } from '../components/Contact'
+import { fittedImage } from '../lib/fitted-image'
 
 export function About() {
   return (
@@ -33,9 +34,9 @@ export function About() {
             merging of body and object, she is increasingly drawn to tools, physical and digital, as
             uniquely human artefacts, exploring them as layered objects with their own
             evolutionary and bodily potential.</p>
-            <img src={`${import.meta.env.BASE_URL}images/about/about.jpg`} alt="Elaina Fielding is a Sculpture Artist who plays with the oddity of the everyday" />
+            <img {...fittedImage(`${import.meta.env.BASE_URL}images/about/about.jpg`, 'about')} alt="Elaina Fielding is a Sculpture Artist who plays with the oddity of the everyday" decoding="async" />
             <p>Elaina Fielding is a Sculpture Artist who plays with the oddity of the everyday</p>
-            <img src={`${import.meta.env.BASE_URL}images/about/KnifeandForkSelfPortrait.jpg`} alt="Self Portrait with Knife and Fork (2022)" className="portrait-image"/>
+            <img {...fittedImage(`${import.meta.env.BASE_URL}images/about/KnifeandForkSelfPortrait.jpg`, 'about')} alt="Self Portrait with Knife and Fork (2022)" className="portrait-image" decoding="async" />
           </div>
         </article>
         <ContactForm />

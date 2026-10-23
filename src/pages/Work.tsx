@@ -162,7 +162,7 @@ export function Work() {
         <article className="page">
           {page > 1 && inRange ? <p className="work-page-label">page {page}</p> : null}
           <div className="work-gallery">
-            {visible.map((work) => (
+            {visible.map((work, index) => (
               <WorkGalleryItem
                 key={work.slug}
                 id={work.slug}
@@ -171,6 +171,7 @@ export function Work() {
                 name={work.name}
                 pieces={workPieces(work)}
                 location={work.location}
+                priority={index === 0}
               />
             ))}
           </div>

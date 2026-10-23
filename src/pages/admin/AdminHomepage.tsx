@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Seo } from '../../components/Seo'
+import { Icon } from '../../components/Icon'
 import { useWorks } from '../../context/useWorks'
 import type { WorkItem } from '../../data/works-seed'
 import { ApiError, logout, saveHomepage, uploadImageFile, type UploadProgress } from '../../lib/admin-api'
@@ -212,7 +213,7 @@ function HomepageEditor() {
                           setDropIndex(null)
                         }}
                       >
-                        <i className="fa-solid fa-grip-lines" aria-hidden="true" />
+                        <Icon name="grip" />
                       </button>
                       {slide.image ? <img src={slide.image} alt="" /> : <span className="admin-thumb" />}
                       <div className="admin-slide-fields">
@@ -259,7 +260,7 @@ function HomepageEditor() {
                             setNotice('')
                           }}
                         >
-                          <i className="fa-solid fa-chevron-up" aria-hidden="true" />
+                          <Icon name="chevron-up" />
                         </button>
                         <button
                           type="button"
@@ -271,7 +272,7 @@ function HomepageEditor() {
                             setNotice('')
                           }}
                         >
-                          <i className="fa-solid fa-chevron-down" aria-hidden="true" />
+                          <Icon name="chevron-down" />
                         </button>
                         <button
                           type="button"
