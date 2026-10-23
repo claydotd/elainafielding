@@ -16,6 +16,13 @@
   port = 8888
   autoLaunch = false
 
+# Scanner paths such as /wp-login.php. Must stay above the SPA fallback.
+[[redirects]]
+  from = "/*.php"
+  to = "/index.html"
+  status = 404
+  force = true
+
 # Keep API routes on the function. This must stay above the SPA fallback.
 [[redirects]]
   from = "/api/*"
