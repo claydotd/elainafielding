@@ -110,6 +110,22 @@ svg {
   max-width: 100%;
 }
 
+.fade-image {
+  height: auto;
+  opacity: 0;
+  transition: opacity var(--duration-slow) var(--ease);
+}
+
+.fade-image.is-loaded {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-image {
+    transition: none;
+  }
+}
+
 .icon {
   width: 1em;
   height: 1em;
@@ -254,7 +270,7 @@ button {
   transition: opacity var(--duration-slow) var(--ease);
 }
 
-.homepage-carousel .carousel-item img:hover {
+.homepage-carousel .carousel-item img.is-loaded:hover {
   opacity: 0.8;
 }
 
@@ -518,7 +534,7 @@ a.work-gallery__item:hover .work-gallery__name {
   transition: opacity var(--duration-slow) var(--ease);
 }
 
-.work-gallery__media img:hover {
+.work-gallery__media img.is-loaded:hover {
   opacity: 0.8;
 }
 
@@ -869,7 +885,11 @@ a.work-gallery__item:hover .work-gallery__name {
   opacity: 0;
 }
 
-.scroll-story__frame img.is-active {
+.scroll-story__frame img.fade-image.is-loaded {
+  opacity: 0;
+}
+
+.scroll-story__frame img.fade-image.is-active.is-loaded {
   opacity: 1;
 }
 

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { WorkPiece } from '../data/works'
 import { fittedImage } from '../lib/fitted-image'
+import { FadeImage } from './FadeImage'
 
 type WorkMetaProps = {
   pieces: WorkPiece[]
@@ -63,7 +64,7 @@ export function WorkGalleryItem({
     <Link to={to} id={id} className="work-gallery__item">
       <div className="work-gallery__media">
         {image ? (
-          <img
+          <FadeImage
             {...fittedImage(image, 'gallery')}
             alt={alt ?? name}
             decoding="async"

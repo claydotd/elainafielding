@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { WorkCarousel } from '../../components/Carousels'
+import { FadeImage } from '../../components/FadeImage'
 import { WorkMeta } from '../../components/WorkGalleryItem'
 import { BackToWork, WorkNeighbors } from '../../components/WorkDetailsTemplate'
 import { Seo } from '../../components/Seo'
@@ -127,7 +128,7 @@ export default function UntitledTwoPage() {
           <div className="scroll-story__stage">
             <div className="scroll-story__frame">
               {steps.map((step, index) => (
-                <img
+                <FadeImage
                   key={`${step.image}-${index}`}
                   {...fittedImage(step.image, 'hero', '(max-width: 640px) 100vw, 50vw')}
                   alt={step.alt}

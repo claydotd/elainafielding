@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetSt
 import { Link } from 'react-router-dom'
 import { useWorks } from '../context/useWorks'
 import { carouselSizes, fittedImage } from '../lib/fitted-image'
+import { FadeImage } from './FadeImage'
 import { Icon } from './Icon'
 
 const AUTOPLAY_MS = 8000
@@ -211,7 +212,7 @@ export function HomepageCarousel({ images, currentIndex, setCurrentIndex }: Home
               <div className="carousel-item" key={`${image.src}-${image.slug}-${index}`} aria-hidden={hidden}>
                 <Link to={`/work/${image.slug}`} className="carousel-link" tabIndex={hidden ? -1 : undefined}>
                   {hidden ? null : (
-                    <img
+                    <FadeImage
                       {...fittedImage(image.src, 'hero')}
                       alt={label}
                       decoding="async"
@@ -306,7 +307,7 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
                 aria-hidden={hidden}
               >
                 {hidden ? null : (
-                  <img
+                  <FadeImage
                     {...fittedImage(image, 'carousel', carouselSizes(visibleCount))}
                     alt={`Work ${mod(index, count) + 1}`}
                     decoding="async"
