@@ -1,13 +1,16 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { createHash } from 'node:crypto'
 import { getStore } from '@netlify/blobs'
-import { homepageSeed, type HomepageSlide } from '../../src/data/homepage.ts'
+import { aboutSeed, type AboutBlock } from '../../src/data/about.ts'
+import { homepageSeed, type HomepageDocument, type HomepageSlide } from '../../src/data/homepage.ts'
 import { worksSeed, type WorkItem } from '../../src/data/works-seed.ts'
-import { imageUrls, parseHomepageList } from './homepage.ts'
+import { aboutImageUrls, parseAboutList } from './about.ts'
+import { imageUrls, parseHomepageDocument } from './homepage.ts'
 import { imageIdFromUrl, parseWorksList } from './works.ts'
 
 const LIST_KEY = 'list'
 const HOMEPAGE_KEY = 'homepage'
+const ABOUT_KEY = 'about'
 const SEED_VERSION_KEY = 'seed-version'
 const SEED_VERSION = createHash('sha256').update(JSON.stringify(worksSeed)).update(JSON.stringify(homepageSeed)).digest('hex')
 
@@ -39,17 +42,34 @@ export async function saveWorks(works: WorkItem[]) {
   await worksStore().setJSON(LIST_KEY, works)
 }
 
-export async function loadHomepage() {
+export async function loadHomepage(): Promise<HomepageDocument> {
   await ensureSeed()
   const stored = await worksStore().get(HOMEPAGE_KEY, { type: 'json' })
-  if (stored == null) return homepageSeed
-  const slides = parseHomepageList(stored)
-  if (!slides) throw new Error('Stored homepage could not be read.')
-  return slides
+  if (stored == null) return { slides: homepageSeed, showCaptions: false }
+  const homepage = parseHomepageDocument(stored)
+  if (!homepage) throw new Error('Stored homepage could not be read.')
+  return homepage
 }
 
-export async function saveHomepage(slides: HomepageSlide[]) {
-  await worksStore().setJSON(HOMEPAGE_KEY, slides)
+export async function saveHomepage(homepage: HomepageDocument) {
+  await worksStore().setJSON(HOMEPAGE_KEY, homepage)
+}
+
+export async function loadAbout() {
+  await ensureSeed()
+  const stored = await worksStore().get(ABOUT_KEY, { type: 'json' })
+  if (stored == null) return aboutSeed
+  const blocks = parseAboutList(stored)
+  if (!blocks) throw new Error('Stored about page could not be read.')
+  return blocks
+}
+
+export async function saveAbout(blocks: AboutBlock[]) {
+  await worksStore().setJSON(ABOUT_KEY, blocks)
+}
+
+export function contentImageUrls(works: WorkItem[], slides: HomepageSlide[], about: AboutBlock[]) {
+  return [...imageUrls(works, slides), ...aboutImageUrls(about)]
 }
 
 export async function saveImage(id: string, bytes: ArrayBuffer, contentType: string) {
@@ -90,10 +110,15 @@ async function applySeed() {
 
   const previousWorks = parseWorksList(storedWorks) ?? []
   const storedSlides = await store.get(HOMEPAGE_KEY, { type: 'json' })
-  const previousSlides = parseHomepageList(storedSlides) ?? []
+  const previousSlides = parseHomepageDocument(storedSlides)?.slides ?? []
+  const storedAbout = await store.get(ABOUT_KEY, { type: 'json' })
+  const previousAbout = parseAboutList(storedAbout) ?? []
   await saveWorks(worksSeed)
-  await saveHomepage(homepageSeed)
-  await deleteUnusedImages(imageUrls(previousWorks, previousSlides), imageUrls(worksSeed, homepageSeed))
+  await saveHomepage({ slides: homepageSeed, showCaptions: false })
+  await deleteUnusedImages(
+    contentImageUrls(previousWorks, previousSlides, previousAbout),
+    contentImageUrls(worksSeed, homepageSeed, previousAbout),
+  )
   await store.set(SEED_VERSION_KEY, SEED_VERSION)
   console.log(local ? 'Seeded local works and homepage.' : 'Seeded live works and homepage.')
   return true

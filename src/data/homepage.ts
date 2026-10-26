@@ -2,6 +2,12 @@ export type HomepageSlide = {
   image: string
   /** Work this image opens, for example `a-household-item-2026` → `/work/a-household-item-2026`. */
   slug: string
+  caption?: string
+}
+
+export type HomepageDocument = {
+  slides: HomepageSlide[]
+  showCaptions: boolean
 }
 
 export const homepageSeed: HomepageSlide[] = [

@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { About } from './pages/About'
+import { AdminAbout } from './pages/admin/AdminAbout'
 import { AdminHomepage } from './pages/admin/AdminHomepage'
 import { AdminLogin } from './pages/admin/AdminLogin'
 import { AdminWorks } from './pages/admin/AdminWorks'
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="admin/login" element={<AdminLogin />} />
         <Route path="admin" element={<AdminWorks />} />
         <Route path="admin/homepage" element={<AdminHomepage />} />
+        <Route path="admin/about" element={<AdminAbout />} />
         <Route path="admin/works/new" element={<WorkEditor />} />
         <Route path="admin/works/:slug" element={<WorkEditor />} />
       </Route>

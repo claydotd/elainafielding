@@ -172,23 +172,26 @@ export type HomepageImage = {
   src: string
   /** Work slug this image opens, for example `untitled-1` → `/work/untitled-1`. */
   slug: string
+  caption?: string
 }
 
 type HomepageCarouselProps = {
   images: HomepageImage[]
+  showCaptions: boolean
   currentIndex: number
   setCurrentIndex: Dispatch<SetStateAction<number>>
 }
 
-export function HomepageCarousel({ images, currentIndex, setCurrentIndex }: HomepageCarouselProps) {
+export function HomepageCarousel({ images, showCaptions, currentIndex, setCurrentIndex }: HomepageCarouselProps) {
   const { works } = useWorks()
   const count = images.length
   const loop = count > 1
   const track = useSeamlessTrack(count, loop, currentIndex, setCurrentIndex, 0)
   const slides = repeatSlides(images, loop ? LOOP_COPIES : 1)
+  const caption = images[track.logical]?.caption?.trim() ?? ''
 
   return (
-    <div className="homepage-carousel">
+    <div className={`homepage-carousel${showCaptions ? ' homepage-carousel--captions' : ''}`}>
       <button
         type="button"
         className="carousel-prev"
@@ -226,6 +229,7 @@ export function HomepageCarousel({ images, currentIndex, setCurrentIndex }: Home
           })}
         </div>
       </div>
+      {showCaptions ? <p className="homepage-carousel__caption">{caption}</p> : null}
       <button
         type="button"
         className="carousel-next"

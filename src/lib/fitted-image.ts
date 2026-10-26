@@ -13,7 +13,7 @@ const sizesFor: Record<ImageUse, string> = {
   gallery: 'min(66vw, max(300px, 50vh))',
   hero: '80vw',
   carousel: '80vw',
-  about: 'min(80vw, 50vh)',
+  about: 'min(45vw, 30rem)',
 }
 
 /** Each carousel cell is an equal slice of the 80%-wide track. */

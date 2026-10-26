@@ -1,9 +1,10 @@
 import type { Config } from '@netlify/functions'
 import type { WorkItem } from '../../src/data/works-seed.ts'
 import { clearedCookie, createSession, hasSession, passwordsMatch, requireAdmin, sessionCookie } from '../lib/auth.ts'
-import { imageUrls, parseHomepageInput, retargetSlides } from '../lib/homepage.ts'
+import { parseAboutInput } from '../lib/about.ts'
+import { parseHomepageInput, retargetSlides } from '../lib/homepage.ts'
 import { json, readJson, routePath } from '../lib/http.ts'
-import { deleteUnusedImages, loadHomepage, loadWorks, readImage, runWithRequest, saveHomepage, saveImage, saveWorks } from '../lib/store.ts'
+import { contentImageUrls, deleteUnusedImages, loadAbout, loadHomepage, loadWorks, readImage, runWithRequest, saveAbout, saveHomepage, saveImage, saveWorks } from '../lib/store.ts'
 import { insertionIndex, parseWorkInput } from '../lib/works.ts'
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024
@@ -18,7 +19,9 @@ async function route(req: Request) {
   try {
     if (path === '/api/works' && req.method === 'GET') return listWorks()
     if (path === '/api/homepage' && req.method === 'GET') return listHomepage()
+    if (path === '/api/about' && req.method === 'GET') return listAbout()
     if (path === '/api/admin/homepage' && req.method === 'PUT') return updateHomepage(req)
+    if (path === '/api/admin/about' && req.method === 'PUT') return updateAbout(req)
     if (path === '/api/admin/login' && req.method === 'POST') return login(req)
     if (path === '/api/admin/logout' && req.method === 'POST') return logout(req)
     if (path === '/api/admin/session' && req.method === 'GET') return session(req)
@@ -50,8 +53,13 @@ async function listWorks() {
 }
 
 async function listHomepage() {
-  const slides = await loadHomepage()
-  return json({ slides }, 200, { 'cache-control': 'no-store' })
+  const homepage = await loadHomepage()
+  return json(homepage, 200, { 'cache-control': 'no-store' })
+}
+
+async function listAbout() {
+  const blocks = await loadAbout()
+  return json({ blocks }, 200, { 'cache-control': 'no-store' })
 }
 
 async function updateHomepage(req: Request) {
@@ -61,9 +69,23 @@ async function updateHomepage(req: Request) {
   const parsed = parseHomepageInput(await readJson(req), new Set(works.map((work) => work.slug)))
   if ('error' in parsed) return json(parsed, 400)
   const previous = await loadHomepage()
+  const about = await loadAbout()
   await saveHomepage(parsed)
-  await deleteUnusedImages(imageUrls(works, previous), imageUrls(works, parsed))
-  return json({ slides: parsed })
+  await deleteUnusedImages(contentImageUrls(works, previous.slides, about), contentImageUrls(works, parsed.slides, about))
+  return json(parsed)
+}
+
+async function updateAbout(req: Request) {
+  const denied = await requireAdmin(req)
+  if (denied) return denied
+  const parsed = parseAboutInput(await readJson(req))
+  if ('error' in parsed) return json(parsed, 400)
+  const works = await loadWorks()
+  const homepage = await loadHomepage()
+  const previous = await loadAbout()
+  await saveAbout(parsed)
+  await deleteUnusedImages(contentImageUrls(works, homepage.slides, previous), contentImageUrls(works, homepage.slides, parsed))
+  return json({ blocks: parsed })
 }
 
 async function login(req: Request) {
@@ -128,13 +150,14 @@ async function updateWork(req: Request, slug: string) {
   if (parsed.slug !== slug && works.some((work) => work.slug === parsed.slug)) {
     return json({ error: 'A work with this slug already exists.' }, 409)
   }
-  const slides = await loadHomepage()
-  const nextSlides = retargetSlides(slides, slug, parsed.slug)
+  const homepage = await loadHomepage()
+  const about = await loadAbout()
+  const nextSlides = retargetSlides(homepage.slides, slug, parsed.slug)
   const next = works.slice()
   next[index] = parsed
   await saveWorks(next)
-  if (nextSlides !== slides) await saveHomepage(nextSlides)
-  await deleteUnusedImages(imageUrls(works, slides), imageUrls(next, nextSlides))
+  if (nextSlides !== homepage.slides) await saveHomepage({ ...homepage, slides: nextSlides })
+  await deleteUnusedImages(contentImageUrls(works, homepage.slides, about), contentImageUrls(next, nextSlides, about))
   return json({ work: parsed })
 }
 
@@ -144,12 +167,13 @@ async function deleteWork(req: Request, slug: string) {
   const works = await loadWorks()
   const existing = works.find((work) => work.slug === slug)
   if (!existing) return json({ error: 'This work could not be found.' }, 404)
-  const slides = await loadHomepage()
-  const nextSlides = slides.filter((slide) => slide.slug !== slug)
+  const homepage = await loadHomepage()
+  const about = await loadAbout()
+  const nextSlides = homepage.slides.filter((slide) => slide.slug !== slug)
   const next = works.filter((work) => work.slug !== slug)
   await saveWorks(next)
-  if (nextSlides.length !== slides.length) await saveHomepage(nextSlides)
-  await deleteUnusedImages(imageUrls(works, slides), imageUrls(next, nextSlides))
+  if (nextSlides.length !== homepage.slides.length) await saveHomepage({ ...homepage, slides: nextSlides })
+  await deleteUnusedImages(contentImageUrls(works, homepage.slides, about), contentImageUrls(next, nextSlides, about))
   return json({ ok: true })
 }
 

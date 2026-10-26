@@ -15,6 +15,7 @@ type SlideDraft = {
   id: string
   image: string
   slug: string
+  caption: string
 }
 
 type UploadJob = {
@@ -38,6 +39,7 @@ function HomepageEditor() {
   const navigate = useNavigate()
   const { works, ready, fromApi } = useWorks()
   const [slides, setSlides] = useState<SlideDraft[] | null>(null)
+  const [showCaptions, setShowCaptions] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -57,7 +59,13 @@ function HomepageEditor() {
         setLoadError('The homepage could not be loaded. Check that the site API is running.')
         return
       }
-      setSlides(next.map((slide) => ({ id: crypto.randomUUID(), image: slide.image, slug: slide.slug })))
+      setSlides(next.slides.map((slide) => ({
+        id: crypto.randomUUID(),
+        image: slide.image,
+        slug: slide.slug,
+        caption: slide.caption ?? '',
+      })))
+      setShowCaptions(next.showCaptions)
     })
     return () => {
       cancelled = true
@@ -114,7 +122,7 @@ function HomepageEditor() {
   function addWork(slug: string) {
     const work = works.find((item) => item.slug === slug)
     if (!work?.image || !slides) return
-    setSlides([...slides, { id: crypto.randomUUID(), image: work.image, slug: work.slug }])
+    setSlides([...slides, { id: crypto.randomUUID(), image: work.image, slug: work.slug, caption: '' }])
     setNotice('')
   }
 
@@ -127,8 +135,20 @@ function HomepageEditor() {
     setSaving(true)
     setError('')
     try {
-      const saved = await saveHomepage(slides.map(({ image, slug }) => ({ image, slug })))
-      setSlides(saved.slides.map((slide) => ({ id: crypto.randomUUID(), image: slide.image, slug: slide.slug })))
+      const saved = await saveHomepage({
+        showCaptions,
+        slides: slides.map(({ image, slug, caption }) => {
+          const trimmed = caption.trim()
+          return trimmed ? { image, slug, caption: trimmed } : { image, slug }
+        }),
+      })
+      setSlides(saved.slides.map((slide) => ({
+        id: crypto.randomUUID(),
+        image: slide.image,
+        slug: slide.slug,
+        caption: slide.caption ?? '',
+      })))
+      setShowCaptions(saved.showCaptions)
       setNotice('Saved.')
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Could not save the homepage.')
@@ -173,6 +193,18 @@ function HomepageEditor() {
               <button className="admin-button" type="submit" disabled={busy || saving}>
                 {saving ? 'Saving…' : 'Save'}
               </button>
+              <label className="admin-toggle">
+                <input
+                  type="checkbox"
+                  checked={showCaptions}
+                  disabled={busy || saving}
+                  onChange={(event) => {
+                    setShowCaptions(event.target.checked)
+                    setNotice('')
+                  }}
+                />
+                <span>Show captions</span>
+              </label>
             </div>
             {slides.length === 0 ? <p>No homepage images yet.</p> : null}
             {slides.length > 0 ? (
@@ -247,6 +279,15 @@ function HomepageEditor() {
                               <option key={choice.url} value={choice.url}>{choice.label}</option>
                             ))}
                           </select>
+                        </label>
+                        <label className="admin-field">
+                          <span>Caption</span>
+                          <input
+                            value={slide.caption}
+                            aria-label={`Caption for image ${index + 1}`}
+                            maxLength={240}
+                            onChange={(event) => patchSlide(slide.id, { caption: event.target.value })}
+                          />
                         </label>
                       </div>
                       <div className="admin-inline">
@@ -336,7 +377,7 @@ function HomepageEditor() {
                 const files = takeFiles(event.currentTarget)
                 if (files.length === 0) return
                 void runUploads(files, (url) => {
-                  setSlides((current) => (current ? [...current, { id: crypto.randomUUID(), image: url, slug: '' }] : current))
+                  setSlides((current) => (current ? [...current, { id: crypto.randomUUID(), image: url, slug: '', caption: '' }] : current))
                   setNotice('')
                 })
               }}

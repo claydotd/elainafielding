@@ -1,4 +1,5 @@
-import type { HomepageSlide } from '../data/homepage'
+import type { AboutBlock } from '../data/about'
+import type { HomepageDocument } from '../data/homepage'
 import type { WorkItem } from '../data/works-seed'
 import { compressImage } from './compress-image'
 
@@ -73,11 +74,19 @@ export function deleteWork(slug: string) {
   return send<{ ok: true }>(`/api/admin/works/${encodeURIComponent(slug)}`, { method: 'DELETE' })
 }
 
-export function saveHomepage(slides: HomepageSlide[]) {
-  return send<{ slides: HomepageSlide[] }>('/api/admin/homepage', {
+export function saveAbout(blocks: AboutBlock[]) {
+  return send<{ blocks: AboutBlock[] }>('/api/admin/about', {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ slides }),
+    body: JSON.stringify({ blocks }),
+  })
+}
+
+export function saveHomepage(homepage: HomepageDocument) {
+  return send<HomepageDocument>('/api/admin/homepage', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(homepage),
   })
 }
 

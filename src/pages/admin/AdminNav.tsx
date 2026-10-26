@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 const tabs = [
   { to: '/admin', label: 'Works', end: true },
   { to: '/admin/homepage', label: 'Homepage', end: true },
+  { to: '/admin/about', label: 'About', end: true },
 ]
 
 export function AdminNav() {
