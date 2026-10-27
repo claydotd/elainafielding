@@ -3,13 +3,20 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Seo } from '../../components/Seo'
 import { Icon } from '../../components/Icon'
 import { useWorks } from '../../context/useWorks'
-import type { WorkItem } from '../../data/works-seed'
+import type { WorkImage, WorkItem } from '../../data/works-seed'
 import { workPieces } from '../../data/works'
 import { ApiError, createWork, deleteWork, updateWork, uploadImageFile, type UploadProgress } from '../../lib/admin-api'
 import { formatBytes } from '../../lib/format-bytes'
 import { moveItem } from '../../lib/reorder'
 import { isSlug, slugify, slugInput } from '../../lib/slug'
 import { AdminGate } from './AdminGate'
+import {
+  ContentBlocksEditor,
+  draftsFromBlocks,
+  storedBlocks,
+  validateBlocks,
+  type ContentBlockDraft,
+} from './ContentBlocksEditor'
 
 type PieceDraft = {
   id: string
@@ -20,13 +27,17 @@ type PieceDraft = {
   dimensions: string
 }
 
+type ImageDraft = WorkImage & { id: string }
+
 type Draft = {
   name: string
   slug: string
   location: string
   description: string
   image: string
-  images: string[]
+  images: ImageDraft[]
+  showCarousel: boolean
+  blocks: ContentBlockDraft[]
   pieces: PieceDraft[]
 }
 
@@ -39,7 +50,7 @@ type UploadJob = {
   error?: string
 }
 
-const CUSTOM_DETAIL_SLUGS = new Set(['untitled-2'])
+const CUSTOM_DETAIL_SLUGS = new Set(['a-sexy-one', 'baby-teeth'])
 
 export function WorkEditor() {
   return (
@@ -154,9 +165,25 @@ function Editor() {
     setNotice('')
   }
 
+  function patchImage(id: string, patch: Partial<WorkImage>) {
+    setDraft((current) => {
+      if (!current) return current
+      return {
+        ...current,
+        images: current.images.map((image) => (image.id === id ? { ...image, ...patch } : image)),
+      }
+    })
+    setNotice('')
+  }
+
   async function onSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!draft || busy || saving) return
+    const invalidBlocks = validateBlocks(draft.blocks)
+    if (invalidBlocks) {
+      setError(invalidBlocks)
+      return
+    }
     const work = toWork(draft)
     if (!work.name) {
       setError('Title is required.')
@@ -465,13 +492,24 @@ function Editor() {
             </section>
 
             <section className="admin-section" aria-labelledby="carousel-images">
-              <h2 id="carousel-images">Carousel images</h2>
+              <div className="admin-section__header">
+                <h2 id="carousel-images">Carousel images</h2>
+                <label className="admin-toggle">
+                  <input
+                    type="checkbox"
+                    checked={draft.showCarousel}
+                    disabled={busy || saving}
+                    onChange={(event) => updateDraft({ showCarousel: event.target.checked })}
+                  />
+                  <span>Show carousel</span>
+                </label>
+              </div>
               {draft.images.length === 0 ? <p>No carousel images yet.</p> : null}
               {draft.images.length > 0 ? (
                 <ol className="admin-list">
                   {draft.images.map((image, index) => (
                     <li
-                      key={`${image}-${index}`}
+                      key={image.id}
                       className={`admin-image${dropIndex === index ? ' is-drop-target' : ''}`}
                       onDragOver={(event) => {
                         event.preventDefault()
@@ -501,8 +539,19 @@ function Editor() {
                       >
                         <Icon name="grip" />
                       </button>
-                      <img src={image} alt="" />
-                      <span>Image {index + 1}</span>
+                      <img src={image.image} alt="" />
+                      <div className="admin-slide-fields">
+                        <span>Image {index + 1}</span>
+                        <label className="admin-field">
+                          <span>Caption</span>
+                          <input
+                            value={image.caption ?? ''}
+                            aria-label={`Caption for carousel image ${index + 1}`}
+                            maxLength={240}
+                            onChange={(event) => patchImage(image.id, { caption: event.target.value })}
+                          />
+                        </label>
+                      </div>
                       <div className="admin-inline">
                         <button
                           type="button"
@@ -537,7 +586,7 @@ function Editor() {
                           type="button"
                           className="admin-button admin-button--quiet"
                           disabled={busy}
-                          onClick={() => updateDraft({ images: draft.images.filter((_, imageIndex) => imageIndex !== index) })}
+                          onClick={() => updateDraft({ images: draft.images.filter((item) => item.id !== image.id) })}
                         >
                           Remove
                         </button>
@@ -560,7 +609,10 @@ function Editor() {
                   const files = takeFiles(event.currentTarget)
                   if (files.length === 0) return
                   void runUploads(files, (url) => {
-                    setDraft((current) => (current ? { ...current, images: [...current.images, url] } : current))
+                    setDraft((current) => (current ? {
+                      ...current,
+                      images: [...current.images, { id: crypto.randomUUID(), image: url, caption: '' }],
+                    } : current))
                     setNotice('')
                   })
                 }}
@@ -579,7 +631,9 @@ function Editor() {
                     setDraft((current) => {
                       if (!current) return current
                       const images = current.images.slice()
-                      images[index] = url
+                      const existing = images[index]
+                      if (!existing) return current
+                      images[index] = { ...existing, image: url }
                       return { ...current, images }
                     })
                     setNotice('')
@@ -587,6 +641,18 @@ function Editor() {
                 }}
               />
             </section>
+
+            <ContentBlocksEditor
+              blocks={draft.blocks}
+              disabled={busy || saving}
+              heading="Content below carousel"
+              headingId="work-blocks"
+              onChange={(blocks) => updateDraft({ blocks })}
+              onError={(message) => {
+                setError(message)
+                if (!message) setNotice('')
+              }}
+            />
 
             {jobs.length > 0 ? (
               <section className="admin-section" aria-labelledby="upload-status">
@@ -627,6 +693,8 @@ function emptyDraft(): Draft {
     description: '',
     image: '',
     images: [],
+    showCarousel: true,
+    blocks: [],
     pieces: [emptyPiece()],
   }
 }
@@ -638,7 +706,13 @@ function toDraft(work: WorkItem): Draft {
     location: work.location ?? '',
     description: work.description ?? '',
     image: work.image,
-    images: work.images ?? [],
+    images: (work.images ?? []).map((item) => ({
+      id: crypto.randomUUID(),
+      image: item.image,
+      caption: item.caption ?? '',
+    })),
+    showCarousel: work.showCarousel !== false,
+    blocks: draftsFromBlocks(work.blocks ?? []),
     pieces: workPieces(work).map((piece) => ({
       id: crypto.randomUUID(),
       title: piece.title,
@@ -662,6 +736,13 @@ function toWork(draft: Draft): WorkItem {
     }
   })
   const first = pieces[0] ?? { title: '', year: '', materials: '', dimensions: '' }
+  const images = draft.images.map((item) => {
+    const caption = item.caption?.trim() ?? ''
+    const image: WorkImage = { image: item.image }
+    if (caption) image.caption = caption
+    return image
+  })
+  const blocks = storedBlocks(draft.blocks)
   const work: WorkItem = {
     name: first.title,
     slug: draft.slug.trim(),
@@ -671,12 +752,14 @@ function toWork(draft: Draft): WorkItem {
     materials: first.materials,
     description: draft.description.trim(),
     image: draft.image,
-    images: draft.images,
+    images,
+    showCarousel: draft.showCarousel,
     pieces,
   }
   if (!work.location) delete work.location
   if (!work.description) delete work.description
   if (!work.images?.length) delete work.images
+  if (blocks.length > 0) work.blocks = blocks
   return work
 }
 

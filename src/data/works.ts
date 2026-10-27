@@ -1,6 +1,7 @@
-import { worksSeed, type WorkItem, type WorkPiece } from './works-seed'
+import type { AboutBlock } from './about'
+import { worksSeed, type WorkImage, type WorkItem, type WorkPiece } from './works-seed'
 
-export type { WorkItem, WorkPiece }
+export type { WorkImage, WorkItem, WorkPiece }
 
 function withBase(path: string) {
   const base = import.meta.env.BASE_URL || '/'
@@ -9,10 +10,16 @@ function withBase(path: string) {
   return `${base.replace(/\/$/, '')}${path}`
 }
 
+function withBaseBlock(block: AboutBlock): AboutBlock {
+  if (block.type === 'text') return block
+  return { ...block, image: withBase(block.image) }
+}
+
 export const works: WorkItem[] = worksSeed.map((work) => ({
   ...work,
   image: withBase(work.image),
-  images: work.images?.map(withBase),
+  images: work.images?.map((item) => ({ ...item, image: withBase(item.image) })),
+  blocks: work.blocks?.map(withBaseBlock),
 }))
 
 export function getWorkBySlug(slug: string) {

@@ -6,6 +6,7 @@ import { FadeImage } from './FadeImage'
 import { Icon } from './Icon'
 
 const AUTOPLAY_MS = 8000
+const AUTOPLAY_WORK_PAGE = 5000
 /** Images visible on a wide page. */
 const MAX_IMAGES_DISPLAYED = 4
 /** Images visible at mobile page widths. */
@@ -54,12 +55,15 @@ function useSeamlessTrack(
   currentIndex: number,
   setCurrentIndex: Dispatch<SetStateAction<number>>,
   layoutKey: number,
+  autoplayMs: number = AUTOPLAY_MS,
 ) {
   const [position, setPosition] = useState(() => {
     const start = mod(currentIndex, count)
     return loop && count > 0 ? count + start : start
   })
   const [instant, setInstant] = useState(true)
+  /** Faster transition when the user clicks prev/next/dots; autoplay keeps the slow pace. */
+  const [manual, setManual] = useState(false)
   const [offsetPx, setOffsetPx] = useState(0)
   const trackRef = useRef<HTMLDivElement>(null)
   const placedRef = useRef(false)
@@ -77,6 +81,7 @@ function useSeamlessTrack(
     const kept = mod(position, layoutRef.current.count)
     layoutRef.current = { count, loop, layoutKey }
     setInstant(true)
+    setManual(false)
     setPosition(loop && count > 0 ? count + kept : kept)
   }
 
@@ -102,6 +107,7 @@ function useSeamlessTrack(
     const observer = new ResizeObserver(() => {
       if (track.clientWidth === width) return
       setInstant(true)
+      setManual(false)
       measure()
     })
     observer.observe(track)
@@ -118,15 +124,17 @@ function useSeamlessTrack(
     if (!loop || count <= 1) return
 
     const id = window.setInterval(() => {
+      setManual(false)
       setInstant(false)
       setPosition((prev) => prev + 1)
-    }, AUTOPLAY_MS)
+    }, autoplayMs)
 
     return () => window.clearInterval(id)
-  }, [loop, count, logical])
+  }, [loop, count, logical, autoplayMs])
 
   const shift = (delta: number) => {
     if (!loop || count <= 1 || delta === 0) return
+    setManual(true)
     setInstant(false)
     setPosition((prev) => {
       const next = prev + delta
@@ -143,6 +151,7 @@ function useSeamlessTrack(
       setPosition(target)
       return
     }
+    setManual(true)
     setInstant(false)
     setPosition((prev) => prev + (target - mod(prev, count)))
   }
@@ -153,6 +162,7 @@ function useSeamlessTrack(
     const canonical = count + mod(prev, count)
     if (prev === canonical) return
     setInstant(true)
+    setManual(false)
     setPosition(canonical)
   }
 
@@ -160,6 +170,7 @@ function useSeamlessTrack(
     position: loop ? position : 0,
     offsetPx,
     instant,
+    manual,
     logical,
     shift,
     goTo,
@@ -203,7 +214,7 @@ export function HomepageCarousel({ images, showCaptions, currentIndex, setCurren
       <div className="carousel-inner">
         <div
           ref={track.trackRef}
-          className={`carousel-track${track.instant ? ' carousel-track--instant' : ''}`}
+          className={`carousel-track${track.instant ? ' carousel-track--instant' : ''}${track.manual ? ' carousel-track--manual' : ''}`}
           style={{ transform: `translate3d(-${track.offsetPx}px, 0, 0)` }}
           onTransitionEnd={track.onTransitionEnd}
         >
@@ -257,8 +268,13 @@ export function HomepageCarousel({ images, showCaptions, currentIndex, setCurren
   )
 }
 
+export type WorkCarouselImage = {
+  image: string
+  caption?: string
+}
+
 type WorkCarouselProps = {
-  images: string[]
+  images: WorkCarouselImage[]
   currentIndex: number
   setCurrentIndex: Dispatch<SetStateAction<number>>
 }
@@ -279,11 +295,12 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
   const visibleCount = visibleCountForPageWidth(pageWidth, count)
   const canScroll = count > visibleCount
   const slotPercent = 100 / visibleCount
-  const track = useSeamlessTrack(count, canScroll, currentIndex, setCurrentIndex, visibleCount)
+  const track = useSeamlessTrack(count, canScroll, currentIndex, setCurrentIndex, visibleCount, AUTOPLAY_WORK_PAGE)
   const slides = repeatSlides(images, canScroll ? LOOP_COPIES : 1)
+  const showCaptions = images.some((image) => Boolean(image.caption?.trim()))
 
   return (
-    <div className="work-carousel">
+    <div className={`work-carousel${showCaptions ? ' work-carousel--captions' : ''}`}>
       {canScroll && (
         <button
           type="button"
@@ -297,26 +314,30 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
       <div className="carousel-inner">
         <div
           ref={track.trackRef}
-          className={`carousel-track${track.instant ? ' carousel-track--instant' : ''}`}
+          className={`carousel-track${track.instant ? ' carousel-track--instant' : ''}${track.manual ? ' carousel-track--manual' : ''}`}
           style={{ transform: `translate3d(-${track.offsetPx}px, 0, 0)` }}
           onTransitionEnd={track.onTransitionEnd}
         >
           {slides.map((image, index) => {
             const hidden = index < track.position - 1 || index > track.position + visibleCount
+            const caption = image.caption?.trim() ?? ''
             return (
               <div
                 className="carousel-item"
-                key={`${image}-${index}`}
+                key={`${image.image}-${index}`}
                 style={{ flex: `0 0 ${slotPercent}%`, maxWidth: `${slotPercent}%` }}
                 aria-hidden={hidden}
               >
                 {hidden ? null : (
-                  <FadeImage
-                    {...fittedImage(image, 'carousel', carouselSizes(visibleCount))}
-                    alt={`Work ${mod(index, count) + 1}`}
-                    decoding="async"
-                    loading="eager"
-                  />
+                  <>
+                    <FadeImage
+                      {...fittedImage(image.image, 'carousel', carouselSizes(visibleCount))}
+                      alt={caption || `Work ${mod(index, count) + 1}`}
+                      decoding="async"
+                      loading="eager"
+                    />
+                    {showCaptions ? <p className="work-carousel__caption">{caption}</p> : null}
+                  </>
                 )}
               </div>
             )

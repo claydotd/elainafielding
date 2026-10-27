@@ -1,9 +1,16 @@
+import type { AboutBlock } from './about'
+
 export type WorkPiece = {
   title: string
   subtitle?: string
   year: string
   materials: string
   dimensions: string
+}
+
+export type WorkImage = {
+  image: string
+  caption?: string
 }
 
 export type WorkItem = {
@@ -15,11 +22,18 @@ export type WorkItem = {
   year: string
   location?: string
   description?: string
-  images?: string[]
+  images?: WorkImage[]
+  /** When false, hide the work-page carousel even if images exist. Defaults to true. */
+  showCarousel?: boolean
+  blocks?: AboutBlock[]
   pieces?: WorkPiece[]
 }
 
-export const worksSeed: WorkItem[] = [
+type SeedWork = Omit<WorkItem, 'images'> & {
+  images?: string[]
+}
+
+const seedWorks: SeedWork[] = [
   {
     "slug": "a-household-item-2026",
     "image": "/images/works/04ebd76f-1812-4d5f-ada7-e085cb910ee2.jpg",
@@ -469,3 +483,8 @@ export const worksSeed: WorkItem[] = [
     ]
   }
 ]
+
+export const worksSeed: WorkItem[] = seedWorks.map((work) => ({
+  ...work,
+  images: work.images?.map((image) => ({ image })),
+}))

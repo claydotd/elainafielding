@@ -1,6 +1,6 @@
 import type { HomepageDocument, HomepageSlide } from '../../src/data/homepage.ts'
 import type { WorkItem } from '../../src/data/works-seed.ts'
-import { isAllowedImage } from './works.ts'
+import { isAllowedImage, workContentImageUrls } from './works.ts'
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const MAX_SLIDES = 40
@@ -55,7 +55,7 @@ export function retargetSlides(slides: HomepageSlide[], from: string, to: string
 
 export function imageUrls(works: WorkItem[], slides: HomepageSlide[]) {
   return [
-    ...works.flatMap((work) => [work.image, ...(work.images ?? [])]),
+    ...workContentImageUrls(works),
     ...slides.map((slide) => slide.image),
   ]
 }

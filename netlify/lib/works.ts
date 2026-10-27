@@ -1,4 +1,6 @@
-import type { WorkItem, WorkPiece } from '../../src/data/works-seed.ts'
+import type { AboutBlock } from '../../src/data/about.ts'
+import type { WorkImage, WorkItem, WorkPiece } from '../../src/data/works-seed.ts'
+import { parseAboutInput, parseAboutList, aboutImageUrls } from './about.ts'
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const UPLOADED_IMAGE = /^\/api\/images\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i
@@ -13,6 +15,7 @@ const LIMITS = {
   dimensions: 120,
   materials: 300,
   description: 8000,
+  caption: 240,
   images: 40,
   pieces: 30,
 }
@@ -40,6 +43,13 @@ export function parseWorksList(value: unknown): WorkItem[] | null {
 }
 
 export function parseWorkInput(value: unknown): WorkItem | { error: string } {
+  if (value && typeof value === 'object' && 'blocks' in value) {
+    const blocks = (value as { blocks: unknown }).blocks
+    if (blocks != null) {
+      const parsed = parseAboutInput({ blocks })
+      if ('error' in parsed) return parsed
+    }
+  }
   const work = parseWork(value, { requireSlugShape: true })
   if (!work) return { error: 'Check the work details and image files, then try again.' }
   if (!work.name) return { error: 'Title is required.' }
@@ -47,6 +57,14 @@ export function parseWorkInput(value: unknown): WorkItem | { error: string } {
   if (work.slug === 'new') return { error: 'Choose a different slug.' }
   if (!SLUG.test(work.slug)) return { error: 'Use a slug made of lowercase letters, numbers, and hyphens.' }
   return work
+}
+
+export function workContentImageUrls(works: WorkItem[]) {
+  return works.flatMap((work) => [
+    work.image,
+    ...(work.images ?? []).map((item) => item.image),
+    ...aboutImageUrls(work.blocks ?? []),
+  ])
 }
 
 function parseWork(value: unknown, options: { requireSlugShape: boolean }): WorkItem | null {
@@ -65,15 +83,13 @@ function parseWork(value: unknown, options: { requireSlugShape: boolean }): Work
   }
   if (options.requireSlugShape && image && !isAllowedImage(image)) return null
   if (!options.requireSlugShape && image && !isAllowedImage(image) && !image.startsWith('/')) return null
+  if (body.showCarousel != null && typeof body.showCarousel !== 'boolean') return null
 
-  const images: string[] = []
-  if (body.images != null) {
-    if (!Array.isArray(body.images) || body.images.length > LIMITS.images) return null
-    for (const item of body.images) {
-      if (typeof item !== 'string' || !isAllowedImage(item)) return null
-      images.push(item)
-    }
-  }
+  const images = parseImages(body.images)
+  if (!images) return null
+
+  const blocks = parseBlocks(body.blocks)
+  if (!blocks) return null
 
   const pieces = parsePieces(body.pieces)
   if (!pieces) return null
@@ -93,7 +109,39 @@ function parseWork(value: unknown, options: { requireSlugShape: boolean }): Work
   if (location) work.location = location
   if (description) work.description = description
   if (images.length > 0) work.images = images
+  if (typeof body.showCarousel === 'boolean') work.showCarousel = body.showCarousel
+  if (blocks.length > 0) work.blocks = blocks
   return work
+}
+
+function parseImages(value: unknown): WorkImage[] | null {
+  if (value == null) return []
+  if (!Array.isArray(value) || value.length > LIMITS.images) return null
+  const images: WorkImage[] = []
+  for (const item of value) {
+    if (typeof item === 'string') {
+      if (!isAllowedImage(item)) return null
+      images.push({ image: item })
+      continue
+    }
+    if (!item || typeof item !== 'object') return null
+    const body = item as Record<string, unknown>
+    if (typeof body.image !== 'string') return null
+    const image = body.image.trim()
+    if (!image || !isAllowedImage(image)) return null
+    if (body.caption != null && typeof body.caption !== 'string') return null
+    const caption = typeof body.caption === 'string' ? body.caption.trim() : ''
+    if (caption.length > LIMITS.caption) return null
+    const entry: WorkImage = { image }
+    if (caption) entry.caption = caption
+    images.push(entry)
+  }
+  return images
+}
+
+function parseBlocks(value: unknown): AboutBlock[] | null {
+  if (value == null) return []
+  return parseAboutList(value)
 }
 
 function parsePieces(value: unknown): WorkPiece[] | null {

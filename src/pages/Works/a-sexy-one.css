@@ -1,0 +1,132 @@
+/* Scroll story: text scrolls on the left, image sticks and swaps on the right. */
+.scroll-story {
+  --scroll-story-offset: 6.5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 5fr);
+  grid-template-rows: auto 1fr;
+  column-gap: var(--space-6);
+  align-items: stretch;
+}
+
+.scroll-story__meta {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+/* Lets stage + text participate in the parent grid on desktop. */
+.scroll-story__body {
+  display: contents;
+}
+
+.scroll-story__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.scroll-story__chapter {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-4);
+  min-height: 78vh;
+  max-width: 36rem;
+  padding-block: var(--space-8);
+}
+
+.scroll-story__chapter p {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.scroll-story__stage {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  min-width: 0;
+}
+
+.scroll-story__frame {
+  position: sticky;
+  top: var(--scroll-story-offset);
+  display: grid;
+  place-items: center;
+  height: calc(100svh - var(--scroll-story-offset) - var(--space-6));
+}
+
+.scroll-story__frame img {
+  grid-area: 1 / 1;
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  opacity: 0;
+}
+
+.scroll-story__frame img.is-active {
+  opacity: 1;
+}
+
+.scroll-story__closing {
+  margin-top: var(--space-12);
+  width: 100%;
+  min-width: 0;
+}
+
+.scroll-story__closing img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+@media (max-width: 640px) {
+  .work-details-container:has(.scroll-story) {
+    padding-top: 0;
+  }
+
+  .work-details-container:has(.scroll-story) .back-link {
+    margin-bottom: 0;
+  }
+
+  .scroll-story {
+    --scroll-story-offset: var(--nav-height);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .scroll-story__body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .scroll-story__stage {
+    position: sticky;
+    top: var(--scroll-story-offset);
+    z-index: 1;
+    width: 100%;
+    margin-block: 0;
+  }
+
+  .scroll-story__frame {
+    position: static;
+    height: auto;
+    place-items: start stretch;
+  }
+
+  .scroll-story__frame img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: none;
+  }
+
+  .scroll-story__chapter {
+    justify-content: flex-start;
+    min-height: 62vh;
+    max-width: none;
+    padding-block: var(--space-4);
+  }
+}

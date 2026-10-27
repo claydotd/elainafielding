@@ -426,10 +426,10 @@ function pictureChoices(work: WorkItem | undefined) {
   }
   add(work.image, 'Lead image')
   let gallery = 0
-  for (const url of work.images ?? []) {
-    if (!url || seen.has(url)) continue
+  for (const item of work.images ?? []) {
+    if (!item.image || seen.has(item.image)) continue
     gallery += 1
-    add(url, `Gallery ${gallery}`)
+    add(item.image, `Gallery ${gallery}`)
   }
   return choices
 }

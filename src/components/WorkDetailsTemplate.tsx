@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useWorks } from '../context/useWorks'
-import type { WorkItem, WorkPiece } from '../data/works'
+import type { AboutBlock } from '../data/about'
+import type { WorkImage, WorkItem, WorkPiece } from '../data/works'
 import { workListHref } from '../lib/work-list'
 import { fittedImage } from '../lib/fitted-image'
+import { AboutContent } from './AboutContent'
 import { WorkCarousel } from './Carousels'
 import { FadeImage } from './FadeImage'
 import { WorkMeta } from './WorkGalleryItem'
@@ -15,7 +17,9 @@ type WorkDetailsTemplateProps = {
   location?: string
   description: string
   image: string
-  images: string[]
+  images: WorkImage[]
+  showCarousel?: boolean
+  blocks?: AboutBlock[]
 }
 
 export function BackToWork({ slug }: { slug: string }) {
@@ -43,13 +47,35 @@ export function WorkNeighbors({ slug }: { slug: string }) {
   )
 }
 
-export function WorkDetailsTemplate({ slug, title, pieces, location, description, image, images }: WorkDetailsTemplateProps) {
+export function WorkDetailsTemplate({
+  slug,
+  title,
+  pieces,
+  location,
+  description,
+  image,
+  images,
+  showCarousel = true,
+  blocks = [],
+}: WorkDetailsTemplateProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const carouselVisible = showCarousel && images.length > 0
 
   return (
     <div className="work-details-container">
       <BackToWork slug={slug} />
       <article className="work-details">
+        <div className="work-details__text">
+          <div className="work-details__meta">
+            <WorkMeta pieces={pieces} location={location} />
+          </div>
+          {description ? (
+            <div className="work-details__description">
+              <p>{description}</p>
+            </div>
+          ) : null}
+        </div>
+
         {image ? (
           <div className="work-details__media">
             <FadeImage
@@ -61,17 +87,16 @@ export function WorkDetailsTemplate({ slug, title, pieces, location, description
             />
           </div>
         ) : null}
-        <div className="work-details__text">
-          <WorkMeta pieces={pieces} location={location} />
-          {description ? (
-            <div className="work-details__description">
-              <p>{description}</p>
-            </div>
-          ) : null}
-        </div>
-        {images.length > 0 ? (
+
+        {carouselVisible ? (
           <div className="work-gallery">
             <WorkCarousel images={images} currentIndex={currentIndex} setCurrentIndex={setCurrentIndex} />
+          </div>
+        ) : null}
+
+        {blocks.length > 0 ? (
+          <div className="work-details__blocks">
+            <AboutContent blocks={blocks} />
           </div>
         ) : null}
       </article>

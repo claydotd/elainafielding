@@ -73,6 +73,8 @@ export function WorkDetail() {
           description={work.description ?? ''}
           image={work.image}
           images={work.images ?? []}
+          showCarousel={work.showCarousel !== false}
+          blocks={work.blocks ?? []}
         />
       </div>
     </>

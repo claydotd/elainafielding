@@ -1,5 +1,6 @@
 import { createContext } from 'react'
-import type { WorkItem, WorkPiece } from '../data/works-seed'
+import type { AboutBlock } from '../data/about'
+import type { WorkImage, WorkItem, WorkPiece } from '../data/works-seed'
 
 export type WorksContextValue = {
   works: WorkItem[]
@@ -21,8 +22,40 @@ export function isWorkItem(value: unknown): value is WorkItem {
     && typeof work.year === 'string'
     && (work.location == null || typeof work.location === 'string')
     && (work.description == null || typeof work.description === 'string')
-    && (work.images == null || (Array.isArray(work.images) && work.images.every((image) => typeof image === 'string')))
+    && (work.showCarousel == null || typeof work.showCarousel === 'boolean')
+    && (work.images == null || (Array.isArray(work.images) && work.images.every(isWorkImage)))
+    && (work.blocks == null || (Array.isArray(work.blocks) && work.blocks.every(isAboutBlock)))
     && (work.pieces == null || (Array.isArray(work.pieces) && work.pieces.every(isWorkPiece)))
+}
+
+function isWorkImage(value: unknown): value is WorkImage {
+  if (!value || typeof value !== 'object') return false
+  const image = value as WorkImage
+  return typeof image.image === 'string'
+    && (image.caption == null || typeof image.caption === 'string')
+}
+
+function isAboutBlock(value: unknown): value is AboutBlock {
+  if (!value || typeof value !== 'object') return false
+  const block = value as AboutBlock
+  if (block.type === 'text') {
+    return typeof block.html === 'string'
+      && (block.align === 'left' || block.align === 'center' || block.align === 'right')
+      && (block.width === 'full' || block.width === 'medium' || block.width === 'small')
+  }
+  if (block.type === 'image') {
+    return typeof block.image === 'string'
+      && typeof block.alt === 'string'
+      && typeof block.caption === 'string'
+  }
+  if (block.type === 'split') {
+    return typeof block.html === 'string'
+      && typeof block.image === 'string'
+      && typeof block.alt === 'string'
+      && typeof block.caption === 'string'
+      && (block.imageSide === 'start' || block.imageSide === 'end')
+  }
+  return false
 }
 
 function isWorkPiece(value: unknown): value is WorkPiece {
