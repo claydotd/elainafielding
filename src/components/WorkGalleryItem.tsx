@@ -75,7 +75,7 @@ export function WorkGalleryItem({
           <div className="work-gallery__fallback" role="img" aria-label={alt ?? name} />
         )}
       </div>
-      <WorkMeta pieces={pieces} />
+      <WorkMeta pieces={pieces} location={location} />
     </Link>
   )
 }
