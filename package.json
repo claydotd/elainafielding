@@ -12,6 +12,7 @@
     "build": "tsc -b && vite build",
     "export-seed": "node scripts/export-seed.mjs",
     "pull-blobs": "node scripts/pull-blobs.mjs",
+    "push-blobs": "node scripts/push-blobs.mjs",
     "backfill-image-sizes": "node scripts/backfill-image-sizes.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
