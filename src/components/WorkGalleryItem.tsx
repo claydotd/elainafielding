@@ -28,7 +28,7 @@ export function WorkMeta({ pieces, location, heading = 'h2' }: WorkMetaProps) {
           {piece.dimensions ? <p className="work-gallery__dimensions">{piece.dimensions}</p> : null}
         </div>
       ))}
-      {location ? <p className="work-gallery__location">{location}</p> : null}
+      {/* {location ? <p className="work-gallery__location">{location}</p> : null} */}
     </div>
   )
 }
