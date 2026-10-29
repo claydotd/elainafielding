@@ -1,6 +1,14 @@
 import type { AboutBlock } from '../../src/data/about.ts'
-import type { WorkImage, WorkItem, WorkPiece } from '../../src/data/works-seed.ts'
-import { parseAboutInput, parseAboutList, aboutImageUrls } from './about.ts'
+import type {
+  MastheadText,
+  ScrollClosingImage,
+  ScrollStoryStep,
+  WorkImage,
+  WorkItem,
+  WorkPiece,
+  WorkTemplate,
+} from '../../src/data/works-seed.ts'
+import { aboutImageUrls, parseWorkBlockList, parseWorkBlocksInput } from './about.ts'
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const UPLOADED_IMAGE = /^\/api\/images\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i
@@ -16,9 +24,16 @@ const LIMITS = {
   materials: 300,
   description: 8000,
   caption: 240,
+  alt: 240,
+  paragraph: 4000,
   images: 40,
   pieces: 30,
+  scrollSteps: 40,
+  paragraphs: 20,
 }
+
+const WORK_TEMPLATES = new Set<WorkTemplate>(['standard', 'scroll-story', 'masthead'])
+const MASTHEAD_TEXT = new Set<MastheadText>(['dark', 'med', 'light'])
 
 export function insertionIndex(works: WorkItem[], year: string) {
   const nextYear = yearNumber(year)
@@ -46,7 +61,7 @@ export function parseWorkInput(value: unknown): WorkItem | { error: string } {
   if (value && typeof value === 'object' && 'blocks' in value) {
     const blocks = (value as { blocks: unknown }).blocks
     if (blocks != null) {
-      const parsed = parseAboutInput({ blocks })
+      const parsed = parseWorkBlocksInput({ blocks })
       if ('error' in parsed) return parsed
     }
   }
@@ -63,6 +78,8 @@ export function workContentImageUrls(works: WorkItem[]) {
   return works.flatMap((work) => [
     work.image,
     ...(work.images ?? []).map((item) => item.image),
+    ...(work.scrollSteps ?? []).map((step) => step.image),
+    ...(work.scrollClosingImage?.src ? [work.scrollClosingImage.src] : []),
     ...aboutImageUrls(work.blocks ?? []),
   ])
 }
@@ -84,6 +101,12 @@ function parseWork(value: unknown, options: { requireSlugShape: boolean }): Work
   if (options.requireSlugShape && image && !isAllowedImage(image)) return null
   if (!options.requireSlugShape && image && !isAllowedImage(image) && !image.startsWith('/')) return null
   if (body.showCarousel != null && typeof body.showCarousel !== 'boolean') return null
+  if (body.carouselCrop != null
+    && body.carouselCrop !== 'none'
+    && body.carouselCrop !== 'portrait'
+    && body.carouselCrop !== 'landscape') {
+    return null
+  }
 
   const images = parseImages(body.images)
   if (!images) return null
@@ -110,8 +133,91 @@ function parseWork(value: unknown, options: { requireSlugShape: boolean }): Work
   if (description) work.description = description
   if (images.length > 0) work.images = images
   if (typeof body.showCarousel === 'boolean') work.showCarousel = body.showCarousel
+  if (body.carouselCrop === 'portrait' || body.carouselCrop === 'landscape' || body.carouselCrop === 'none') {
+    work.carouselCrop = body.carouselCrop
+  }
   if (blocks.length > 0) work.blocks = blocks
+
+  const template = parseTemplate(body.template)
+  if (template === false) return null
+  if (template) work.template = template
+
+  const masthead = parseMastheadText(body.mastheadText)
+  if (masthead === false) return null
+  if (masthead) work.mastheadText = masthead
+
+  const scrollSteps = parseScrollSteps(body.scrollSteps, options)
+  if (!scrollSteps) return null
+  if (scrollSteps.length > 0) work.scrollSteps = scrollSteps
+
+  if ('scrollClosingImage' in body) {
+    const closing = parseScrollClosingImage(body.scrollClosingImage, options)
+    if (closing === false) return null
+    work.scrollClosingImage = closing
+  }
+
   return work
+}
+
+function parseTemplate(value: unknown): WorkTemplate | null | false {
+  if (value == null || value === '') return null
+  if (typeof value !== 'string' || !WORK_TEMPLATES.has(value as WorkTemplate)) return false
+  return value as WorkTemplate
+}
+
+function parseMastheadText(value: unknown): MastheadText | null | false {
+  if (value == null || value === '') return null
+  if (typeof value !== 'string' || !MASTHEAD_TEXT.has(value as MastheadText)) return false
+  return value as MastheadText
+}
+
+function parseScrollSteps(
+  value: unknown,
+  options: { requireSlugShape: boolean },
+): ScrollStoryStep[] | null {
+  if (value == null) return []
+  if (!Array.isArray(value) || value.length > LIMITS.scrollSteps) return null
+  const steps: ScrollStoryStep[] = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object') return null
+    const body = item as Record<string, unknown>
+    const image = clip(body.image, 240)
+    const alt = clip(body.alt, LIMITS.alt)
+    if (image == null || alt == null) return null
+    if (!image) return null
+    if (options.requireSlugShape && !isAllowedImage(image)) return null
+    if (!options.requireSlugShape && !isAllowedImage(image) && !image.startsWith('/')) return null
+    if (body.paragraphs == null) {
+      steps.push({ image, alt, paragraphs: [] })
+      continue
+    }
+    if (!Array.isArray(body.paragraphs) || body.paragraphs.length > LIMITS.paragraphs) return null
+    const paragraphs: string[] = []
+    for (const paragraph of body.paragraphs) {
+      if (typeof paragraph !== 'string') return null
+      const trimmed = paragraph.trim()
+      if (trimmed.length > LIMITS.paragraph) return null
+      if (trimmed) paragraphs.push(trimmed)
+    }
+    steps.push({ image, alt, paragraphs })
+  }
+  return steps
+}
+
+function parseScrollClosingImage(
+  value: unknown,
+  options: { requireSlugShape: boolean },
+): ScrollClosingImage | null | false {
+  if (value == null) return null
+  if (!value || typeof value !== 'object') return false
+  const body = value as Record<string, unknown>
+  const src = clip(body.src, 240)
+  const alt = clip(body.alt, LIMITS.alt)
+  if (src == null || alt == null) return false
+  if (!src) return null
+  if (options.requireSlugShape && !isAllowedImage(src)) return false
+  if (!options.requireSlugShape && !isAllowedImage(src) && !src.startsWith('/')) return false
+  return { src, alt }
 }
 
 function parseImages(value: unknown): WorkImage[] | null {
@@ -141,7 +247,7 @@ function parseImages(value: unknown): WorkImage[] | null {
 
 function parseBlocks(value: unknown): AboutBlock[] | null {
   if (value == null) return []
-  return parseAboutList(value)
+  return parseWorkBlockList(value)
 }
 
 function parsePieces(value: unknown): WorkPiece[] | null {

@@ -7,6 +7,8 @@ const MIN_QUALITY = 0.5
 export type PreparedImage = {
   blob: Blob
   contentType: string
+  width: number
+  height: number
   originalBytes: number
   compressedBytes: number
 }
@@ -35,17 +37,17 @@ function fitted(width: number, height: number, maxEdge: number) {
 }
 
 function render(bitmap: ImageBitmap, maxEdge: number, quality: number, type: string) {
-  const { width, height } = fitted(bitmap.width, bitmap.height, maxEdge)
+  const size = fitted(bitmap.width, bitmap.height, maxEdge)
   const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
+  canvas.width = size.width
+  canvas.height = size.height
   const context = canvas.getContext('2d')
   if (!context) return Promise.reject(new Error('This image could not be prepared.'))
-  context.drawImage(bitmap, 0, 0, width, height)
-  return new Promise<Blob>((resolve, reject) => {
+  context.drawImage(bitmap, 0, 0, size.width, size.height)
+  return new Promise<{ blob: Blob; width: number; height: number }>((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) reject(new Error('This image could not be compressed.'))
-      else resolve(blob)
+      else resolve({ blob, width: size.width, height: size.height })
     }, type, quality)
   })
 }
@@ -65,30 +67,32 @@ export async function compressImage(file: File): Promise<PreparedImage> {
     const type = (await supportsWebp()) ? 'image/webp' : 'image/jpeg'
     let edge = START_EDGE
     let quality = START_QUALITY
-    let blob = await render(bitmap, edge, quality, type)
+    let prepared = await render(bitmap, edge, quality, type)
     // Prefer a file no larger than the original when that original is already a real image.
     const sizeTarget = file.size > 100 * 1024 ? Math.min(MAX_BYTES, file.size) : MAX_BYTES
 
-    while (blob.size > sizeTarget && quality > MIN_QUALITY) {
+    while (prepared.blob.size > sizeTarget && quality > MIN_QUALITY) {
       quality = Math.round((quality - 0.08) * 100) / 100
       const next = await render(bitmap, edge, quality, type)
-      if (next.size < blob.size) blob = next
+      if (next.blob.size < prepared.blob.size) prepared = next
     }
 
-    while (blob.size > MAX_BYTES && edge > MIN_EDGE) {
+    while (prepared.blob.size > MAX_BYTES && edge > MIN_EDGE) {
       edge = Math.max(MIN_EDGE, Math.round(edge * 0.85))
       const next = await render(bitmap, edge, quality, type)
-      if (next.size < blob.size) blob = next
+      if (next.blob.size < prepared.blob.size) prepared = next
       else if (edge === MIN_EDGE) break
     }
 
-    if (blob.size > MAX_BYTES) throw new Error('Could not compress this image under 4 MB.')
+    if (prepared.blob.size > MAX_BYTES) throw new Error('Could not compress this image under 4 MB.')
 
     return {
-      blob,
-      contentType: blob.type || type,
+      blob: prepared.blob,
+      contentType: prepared.blob.type || type,
+      width: prepared.width,
+      height: prepared.height,
       originalBytes: file.size,
-      compressedBytes: blob.size,
+      compressedBytes: prepared.blob.size,
     }
   } finally {
     bitmap.close()

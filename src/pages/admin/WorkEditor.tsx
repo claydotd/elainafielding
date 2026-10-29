@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Seo } from '../../components/Seo'
 import { Icon } from '../../components/Icon'
 import { useWorks } from '../../context/useWorks'
-import type { WorkImage, WorkItem } from '../../data/works-seed'
-import { workPieces } from '../../data/works'
+import type { MastheadText, WorkItem, WorkTemplate } from '../../data/works-seed'
+import { MASTHEAD_TEXT_OPTIONS, workContentBlocks, workPieces } from '../../data/works'
 import { ApiError, createWork, deleteWork, updateWork, uploadImageFile, type UploadProgress } from '../../lib/admin-api'
 import { formatBytes } from '../../lib/format-bytes'
 import { moveItem } from '../../lib/reorder'
@@ -27,7 +27,12 @@ type PieceDraft = {
   dimensions: string
 }
 
-type ImageDraft = WorkImage & { id: string }
+type ScrollStepDraft = {
+  id: string
+  image: string
+  alt: string
+  paragraphs: string
+}
 
 type Draft = {
   name: string
@@ -35,8 +40,9 @@ type Draft = {
   location: string
   description: string
   image: string
-  images: ImageDraft[]
-  showCarousel: boolean
+  template: WorkTemplate
+  mastheadText: MastheadText
+  scrollSteps: ScrollStepDraft[]
   blocks: ContentBlockDraft[]
   pieces: PieceDraft[]
 }
@@ -50,7 +56,12 @@ type UploadJob = {
   error?: string
 }
 
-const CUSTOM_DETAIL_SLUGS = new Set(['a-sexy-one', 'baby-teeth'])
+const customDetailModules = import.meta.glob('../Works/*.tsx', { eager: true })
+const CUSTOM_DETAIL_SLUGS = new Set(
+  Object.keys(customDetailModules)
+    .map((path) => path.match(/Works\/([^/]+)\.tsx$/i)?.[1]?.toLowerCase())
+    .filter((slug): slug is string => Boolean(slug)),
+)
 
 export function WorkEditor() {
   return (
@@ -74,15 +85,13 @@ function Editor() {
   const [notice, setNotice] = useState('')
   const [seenSave, setSeenSave] = useState('')
   const [saving, setSaving] = useState(false)
-  const [dropIndex, setDropIndex] = useState<number | null>(null)
   const [pieceDropIndex, setPieceDropIndex] = useState<number | null>(null)
   const [closedPieces, setClosedPieces] = useState<Set<string>>(new Set())
   const leadInput = useRef<HTMLInputElement>(null)
-  const addInput = useRef<HTMLInputElement>(null)
-  const replaceInput = useRef<HTMLInputElement>(null)
-  const replaceAt = useRef<number | null>(null)
-  const dragFrom = useRef<number | null>(null)
+  const scrollStepInputs = useRef<Record<string, HTMLInputElement | null>>({})
   const pieceDragFrom = useRef<number | null>(null)
+  const scrollDragFrom = useRef<number | null>(null)
+  const [scrollDropIndex, setScrollDropIndex] = useState<number | null>(null)
   const savedFlag = Boolean((location.state as { saved?: boolean } | null)?.saved)
   const saveToken = savedFlag ? location.key : ''
   const seedKey = !ready || !fromApi ? '' : isNew ? 'new' : routeSlug
@@ -165,15 +174,8 @@ function Editor() {
     setNotice('')
   }
 
-  function patchImage(id: string, patch: Partial<WorkImage>) {
-    setDraft((current) => {
-      if (!current) return current
-      return {
-        ...current,
-        images: current.images.map((image) => (image.id === id ? { ...image, ...patch } : image)),
-      }
-    })
-    setNotice('')
+  function applyScrollSteps(scrollSteps: ScrollStepDraft[]) {
+    updateDraft({ scrollSteps })
   }
 
   async function onSave(event: FormEvent<HTMLFormElement>) {
@@ -183,6 +185,15 @@ function Editor() {
     if (invalidBlocks) {
       setError(invalidBlocks)
       return
+    }
+    if (draft.template === 'scroll-story') {
+      const missingStep = draft.scrollSteps.findIndex(
+        (step) => !step.image.trim() && (step.alt.trim() || step.paragraphs.trim()),
+      )
+      if (missingStep >= 0) {
+        setError(`Scroll chapter ${missingStep + 1} needs an image.`)
+        return
+      }
     }
     const work = toWork(draft)
     if (!work.name) {
@@ -269,7 +280,7 @@ function Editor() {
           <form className="admin-form" onSubmit={(event) => void onSave(event)}>
             {customPage ? (
               <p className="admin-note">
-                This work has a custom page, which controls the detail layout. The piece details and location on that page still come from these fields.
+                This work has a custom page file, which overrides the CMS template below. Piece details and location still come from these fields.
               </p>
             ) : null}
             {error ? <p className="admin-error" role="alert">{error}</p> : null}
@@ -285,6 +296,32 @@ function Editor() {
                 </button>
               )}
             </div>
+            <label className="admin-field">
+              <span>Template</span>
+              <select
+                value={draft.template}
+                onChange={(event) => updateDraft({ template: event.target.value as WorkTemplate })}
+              >
+                <option value="standard">Standard</option>
+                <option value="scroll-story">Scroll-story</option>
+                <option value="masthead">Masthead</option>
+              </select>
+            </label>
+            {draft.template === 'masthead' ? (
+              <label className="admin-field">
+                <span>Text colour</span>
+                <select
+                  value={draft.mastheadText}
+                  onChange={(event) => updateDraft({ mastheadText: event.target.value as MastheadText })}
+                >
+                  {MASTHEAD_TEXT_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option === 'med' ? 'Med' : option.charAt(0).toUpperCase() + option.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <label className="admin-field">
               <span>Slug</span>
               <input
@@ -491,162 +528,158 @@ function Editor() {
               />
             </section>
 
-            <section className="admin-section" aria-labelledby="carousel-images">
-              <div className="admin-section__header">
-                <h2 id="carousel-images">Carousel images</h2>
-                <label className="admin-toggle">
-                  <input
-                    type="checkbox"
-                    checked={draft.showCarousel}
-                    disabled={busy || saving}
-                    onChange={(event) => updateDraft({ showCarousel: event.target.checked })}
-                  />
-                  <span>Show carousel</span>
-                </label>
-              </div>
-              {draft.images.length === 0 ? <p>No carousel images yet.</p> : null}
-              {draft.images.length > 0 ? (
+            {draft.template === 'scroll-story' ? (
+              <section className="admin-section" aria-labelledby="scroll-chapters">
+                <h2 id="scroll-chapters">Scroll chapters</h2>
                 <ol className="admin-list">
-                  {draft.images.map((image, index) => (
+                  {draft.scrollSteps.map((step, index) => (
                     <li
-                      key={image.id}
-                      className={`admin-image${dropIndex === index ? ' is-drop-target' : ''}`}
+                      key={step.id}
+                      className={`admin-piece${scrollDropIndex === index ? ' is-drop-target' : ''}`}
                       onDragOver={(event) => {
                         event.preventDefault()
-                        setDropIndex(index)
+                        setScrollDropIndex(index)
                       }}
+                      onDragLeave={() => setScrollDropIndex((current) => (current === index ? null : current))}
                       onDrop={(event) => {
                         event.preventDefault()
-                        const from = dragFrom.current
-                        dragFrom.current = null
-                        setDropIndex(null)
-                        if (from == null || !draft) return
-                        updateDraft({ images: moveItem(draft.images, from, index) })
+                        const from = scrollDragFrom.current
+                        scrollDragFrom.current = null
+                        setScrollDropIndex(null)
+                        if (from == null) return
+                        applyScrollSteps(moveItem(draft.scrollSteps, from, index))
                       }}
                     >
-                      <button
-                        type="button"
-                        className="admin-drag"
-                        draggable={!busy}
-                        aria-label={`Drag carousel image ${index + 1}`}
-                        onDragStart={() => {
-                          dragFrom.current = index
-                        }}
-                        onDragEnd={() => {
-                          dragFrom.current = null
-                          setDropIndex(null)
-                        }}
-                      >
-                        <Icon name="grip" />
-                      </button>
-                      <img src={image.image} alt="" />
-                      <div className="admin-slide-fields">
-                        <span>Image {index + 1}</span>
-                        <label className="admin-field">
-                          <span>Caption</span>
-                          <input
-                            value={image.caption ?? ''}
-                            aria-label={`Caption for carousel image ${index + 1}`}
-                            maxLength={240}
-                            onChange={(event) => patchImage(image.id, { caption: event.target.value })}
-                          />
-                        </label>
-                      </div>
-                      <div className="admin-inline">
+                      <div className="admin-piece__bar">
                         <button
                           type="button"
-                          className="admin-icon"
-                          aria-label={`Move image ${index + 1} up`}
-                          disabled={busy || index === 0}
-                          onClick={() => updateDraft({ images: moveItem(draft.images, index, index - 1) })}
-                        >
-                          <Icon name="chevron-up" />
-                        </button>
-                        <button
-                          type="button"
-                          className="admin-icon"
-                          aria-label={`Move image ${index + 1} down`}
-                          disabled={busy || index === draft.images.length - 1}
-                          onClick={() => updateDraft({ images: moveItem(draft.images, index, index + 1) })}
-                        >
-                          <Icon name="chevron-down" />
-                        </button>
-                        <button
-                          type="button"
-                          className="admin-button admin-button--quiet"
-                          disabled={busy}
-                          onClick={() => {
-                            replaceAt.current = index
-                            replaceInput.current?.click()
+                          className="admin-drag"
+                          draggable
+                          aria-label={`Drag chapter ${index + 1}`}
+                          onDragStart={() => {
+                            scrollDragFrom.current = index
+                          }}
+                          onDragEnd={() => {
+                            scrollDragFrom.current = null
+                            setScrollDropIndex(null)
                           }}
                         >
-                          Replace
+                          <Icon name="grip" />
                         </button>
-                        <button
-                          type="button"
-                          className="admin-button admin-button--quiet"
-                          disabled={busy}
-                          onClick={() => updateDraft({ images: draft.images.filter((item) => item.id !== image.id) })}
-                        >
-                          Remove
-                        </button>
+                        <span>Chapter {index + 1}</span>
+                        <div className="admin-inline">
+                          <button
+                            className="admin-button admin-button--quiet"
+                            type="button"
+                            disabled={draft.scrollSteps.length <= 1}
+                            onClick={() => applyScrollSteps(draft.scrollSteps.filter((item) => item.id !== step.id))}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                      <div className="admin-piece__details">
+                        <div className="admin-field">
+                          <span>Image</span>
+                          {step.image ? <img className="admin-lead" src={step.image} alt="" /> : <span className="admin-thumb" />}
+                          <div className="admin-inline">
+                            <button
+                              className="admin-button admin-button--quiet"
+                              type="button"
+                              disabled={busy}
+                              onClick={() => scrollStepInputs.current[step.id]?.click()}
+                            >
+                              {step.image ? 'Replace' : 'Upload'}
+                            </button>
+                            {step.image ? (
+                              <button
+                                className="admin-button admin-button--quiet"
+                                type="button"
+                                onClick={() => {
+                                  applyScrollSteps(
+                                    draft.scrollSteps.map((item) => (item.id === step.id ? { ...item, image: '' } : item)),
+                                  )
+                                }}
+                              >
+                                Remove
+                              </button>
+                            ) : null}
+                          </div>
+                          <input
+                            ref={(node) => {
+                              scrollStepInputs.current[step.id] = node
+                            }}
+                            className="sr-only"
+                            type="file"
+                            accept="image/*"
+                            aria-label={`Upload chapter ${index + 1} image`}
+                            onChange={(event) => {
+                              const input = event.currentTarget
+                              const files = takeFiles(input)
+                              if (files.length === 0) return
+                              const stepId = step.id
+                              void runUploads(files.slice(0, 1), (url) => {
+                                setDraft((current) => {
+                                  if (!current) return current
+                                  return {
+                                    ...current,
+                                    scrollSteps: current.scrollSteps.map((item) => (
+                                      item.id === stepId ? { ...item, image: url } : item
+                                    )),
+                                  }
+                                })
+                                setNotice('')
+                              })
+                            }}
+                          />
+                        </div>
+                        <label className="admin-field">
+                          <span>Alt text</span>
+                          <input
+                            value={step.alt}
+                            onChange={(event) => {
+                              const alt = event.target.value
+                              applyScrollSteps(
+                                draft.scrollSteps.map((item) => (item.id === step.id ? { ...item, alt } : item)),
+                              )
+                            }}
+                          />
+                        </label>
+                        <label className="admin-field">
+                          <span>Chapter text</span>
+                          <textarea
+                            rows={4}
+                            value={step.paragraphs}
+                            placeholder="One paragraph per blank line. Leave empty for an image-only beat."
+                            onChange={(event) => {
+                              const paragraphs = event.target.value
+                              applyScrollSteps(
+                                draft.scrollSteps.map((item) => (item.id === step.id ? { ...item, paragraphs } : item)),
+                              )
+                            }}
+                          />
+                        </label>
                       </div>
                     </li>
                   ))}
                 </ol>
-              ) : null}
-              <button className="admin-button admin-button--quiet" type="button" disabled={busy} onClick={() => addInput.current?.click()}>
-                Add images
-              </button>
-              <input
-                ref={addInput}
-                className="sr-only"
-                type="file"
-                accept="image/*"
-                multiple
-                aria-label="Upload carousel images"
-                onChange={(event) => {
-                  const files = takeFiles(event.currentTarget)
-                  if (files.length === 0) return
-                  void runUploads(files, (url) => {
-                    setDraft((current) => (current ? {
-                      ...current,
-                      images: [...current.images, { id: crypto.randomUUID(), image: url, caption: '' }],
-                    } : current))
-                    setNotice('')
-                  })
-                }}
-              />
-              <input
-                ref={replaceInput}
-                className="sr-only"
-                type="file"
-                accept="image/*"
-                aria-label="Replace carousel image"
-                onChange={(event) => {
-                  const index = replaceAt.current
-                  const files = takeFiles(event.currentTarget)
-                  if (index == null || files.length === 0) return
-                  void runUploads(files.slice(0, 1), (url) => {
-                    setDraft((current) => {
-                      if (!current) return current
-                      const images = current.images.slice()
-                      const existing = images[index]
-                      if (!existing) return current
-                      images[index] = { ...existing, image: url }
-                      return { ...current, images }
-                    })
-                    setNotice('')
-                  })
-                }}
-              />
-            </section>
+                <button
+                  className="admin-button admin-button--quiet"
+                  type="button"
+                  onClick={() => applyScrollSteps([...draft.scrollSteps, emptyScrollStep()])}
+                >
+                  Add chapter
+                </button>
+                <p>Extra images after the story belong in content blocks below.</p>
+              </section>
+            ) : null}
 
             <ContentBlocksEditor
               blocks={draft.blocks}
               disabled={busy || saving}
-              heading="Content below carousel"
+              heading="Content"
               headingId="work-blocks"
+              allowCarousel
               onChange={(blocks) => updateDraft({ blocks })}
               onError={(message) => {
                 setError(message)
@@ -685,6 +718,21 @@ function emptyPiece(): PieceDraft {
   return { id: crypto.randomUUID(), title: '', subtitle: '', year: '', materials: '', dimensions: '' }
 }
 
+function emptyScrollStep(): ScrollStepDraft {
+  return { id: crypto.randomUUID(), image: '', alt: '', paragraphs: '' }
+}
+
+function paragraphsToText(paragraphs: string[]) {
+  return paragraphs.join('\n\n')
+}
+
+function textToParagraphs(value: string) {
+  return value
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+}
+
 function emptyDraft(): Draft {
   return {
     name: '',
@@ -692,27 +740,47 @@ function emptyDraft(): Draft {
     location: '',
     description: '',
     image: '',
-    images: [],
-    showCarousel: true,
+    template: 'standard',
+    mastheadText: 'light',
+    scrollSteps: [emptyScrollStep()],
     blocks: [],
     pieces: [emptyPiece()],
   }
 }
 
 function toDraft(work: WorkItem): Draft {
+  const blocks = draftsFromBlocks(workContentBlocks(work))
+  const closing = work.scrollClosingImage
+  if (closing?.src && !blocks.some((block) => block.type === 'image' && block.image === closing.src)) {
+    blocks.push({
+      id: crypto.randomUUID(),
+      type: 'image',
+      image: closing.src,
+      alt: closing.alt,
+      caption: '',
+      size: 'full',
+      align: 'center',
+      crop: 'original',
+    })
+  }
+
   return {
     name: work.name,
     slug: work.slug,
     location: work.location ?? '',
     description: work.description ?? '',
     image: work.image,
-    images: (work.images ?? []).map((item) => ({
-      id: crypto.randomUUID(),
-      image: item.image,
-      caption: item.caption ?? '',
-    })),
-    showCarousel: work.showCarousel !== false,
-    blocks: draftsFromBlocks(work.blocks ?? []),
+    template: work.template ?? 'standard',
+    mastheadText: work.mastheadText ?? 'light',
+    scrollSteps: work.scrollSteps?.length
+      ? work.scrollSteps.map((step) => ({
+          id: crypto.randomUUID(),
+          image: step.image,
+          alt: step.alt,
+          paragraphs: paragraphsToText(step.paragraphs),
+        }))
+      : [emptyScrollStep()],
+    blocks,
     pieces: workPieces(work).map((piece) => ({
       id: crypto.randomUUID(),
       title: piece.title,
@@ -736,12 +804,6 @@ function toWork(draft: Draft): WorkItem {
     }
   })
   const first = pieces[0] ?? { title: '', year: '', materials: '', dimensions: '' }
-  const images = draft.images.map((item) => {
-    const caption = item.caption?.trim() ?? ''
-    const image: WorkImage = { image: item.image }
-    if (caption) image.caption = caption
-    return image
-  })
   const blocks = storedBlocks(draft.blocks)
   const work: WorkItem = {
     name: first.title,
@@ -752,13 +814,24 @@ function toWork(draft: Draft): WorkItem {
     materials: first.materials,
     description: draft.description.trim(),
     image: draft.image,
-    images,
-    showCarousel: draft.showCarousel,
     pieces,
+    template: draft.template,
   }
   if (!work.location) delete work.location
   if (!work.description) delete work.description
-  if (!work.images?.length) delete work.images
+  if (draft.template === 'standard') delete work.template
+  if (draft.template === 'masthead') work.mastheadText = draft.mastheadText
+  if (draft.template === 'scroll-story') {
+    const scrollSteps = draft.scrollSteps
+      .filter((step) => step.image.trim())
+      .map((step) => ({
+        image: step.image.trim(),
+        alt: step.alt.trim(),
+        paragraphs: textToParagraphs(step.paragraphs),
+      }))
+    if (scrollSteps.length > 0) work.scrollSteps = scrollSteps
+    work.scrollClosingImage = null
+  }
   if (blocks.length > 0) work.blocks = blocks
   return work
 }

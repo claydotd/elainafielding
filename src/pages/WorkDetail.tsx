@@ -1,9 +1,10 @@
 import type { ComponentType } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { WorkDetailsTemplate } from '../components/WorkDetailsTemplate'
 import { useWorks } from '../context/useWorks'
-import { workPieces, workSummary } from '../data/works'
+import { mastheadText, workContentBlocks, workPieces, workSummary, workTemplate } from '../data/works'
+import { NotFound } from './NotFound'
 
 type WorkPageModule = {
   default?: ComponentType
@@ -42,19 +43,7 @@ export function WorkDetail() {
   const work = works.find((item) => item.slug === slug)
 
   if (!work) {
-    return (
-      <>
-        <Seo title="Work" path={`/work/${slug}`} noIndex />
-        <div className="page-container work-details-container">
-          <article className="page">
-            <p>This work could not be found.</p>
-            <p>
-              <Link to="/work">Back to work</Link>
-            </p>
-          </article>
-        </div>
-      </>
-    )
+    return <NotFound message="This work could not be found." />
   }
 
   return (
@@ -72,9 +61,10 @@ export function WorkDetail() {
           location={work.location}
           description={work.description ?? ''}
           image={work.image}
-          images={work.images ?? []}
-          showCarousel={work.showCarousel !== false}
-          blocks={work.blocks ?? []}
+          blocks={workContentBlocks(work)}
+          template={workTemplate(work)}
+          mastheadText={mastheadText(work)}
+          scrollSteps={work.scrollSteps}
         />
       </div>
     </>

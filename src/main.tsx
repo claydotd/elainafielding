@@ -4,18 +4,24 @@ import { HelmetProvider } from 'react-helmet-async'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import { WorksProvider } from './context/WorksContext'
+import { loadRemoteImageSizes } from './data/image-sizes'
 import './index.css'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <HelmetProvider>
-      <BrowserRouter
-        basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined}
-      >
-        <WorksProvider>
-          <App />
-        </WorksProvider>
-      </BrowserRouter>
-    </HelmetProvider>
-  </StrictMode>,
-)
+async function boot() {
+  await loadRemoteImageSizes()
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <HelmetProvider>
+        <BrowserRouter
+          basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined}
+        >
+          <WorksProvider>
+            <App />
+          </WorksProvider>
+        </BrowserRouter>
+      </HelmetProvider>
+    </StrictMode>,
+  )
+}
+
+void boot()

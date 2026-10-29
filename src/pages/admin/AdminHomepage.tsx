@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Seo } from '../../components/Seo'
 import { Icon } from '../../components/Icon'
 import { useWorks } from '../../context/useWorks'
+import { isCarouselCrop, type CarouselCrop } from '../../data/carousel'
 import type { WorkItem } from '../../data/works-seed'
 import { ApiError, logout, saveHomepage, uploadImageFile, type UploadProgress } from '../../lib/admin-api'
 import { formatBytes } from '../../lib/format-bytes'
@@ -40,6 +41,7 @@ function HomepageEditor() {
   const { works, ready, fromApi } = useWorks()
   const [slides, setSlides] = useState<SlideDraft[] | null>(null)
   const [showCaptions, setShowCaptions] = useState(false)
+  const [carouselCrop, setCarouselCrop] = useState<CarouselCrop>('none')
   const [loadError, setLoadError] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -66,6 +68,7 @@ function HomepageEditor() {
         caption: slide.caption ?? '',
       })))
       setShowCaptions(next.showCaptions)
+      setCarouselCrop(next.carouselCrop ?? 'none')
     })
     return () => {
       cancelled = true
@@ -137,6 +140,7 @@ function HomepageEditor() {
     try {
       const saved = await saveHomepage({
         showCaptions,
+        carouselCrop,
         slides: slides.map(({ image, slug, caption }) => {
           const trimmed = caption.trim()
           return trimmed ? { image, slug, caption: trimmed } : { image, slug }
@@ -149,6 +153,7 @@ function HomepageEditor() {
         caption: slide.caption ?? '',
       })))
       setShowCaptions(saved.showCaptions)
+      setCarouselCrop(saved.carouselCrop ?? 'none')
       setNotice('Saved.')
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Could not save the homepage.')
@@ -193,6 +198,24 @@ function HomepageEditor() {
               <button className="admin-button" type="submit" disabled={busy || saving}>
                 {saving ? 'Saving…' : 'Save'}
               </button>
+              <label className="admin-field">
+                <span>Crop</span>
+                <select
+                  value={carouselCrop}
+                  disabled={busy || saving}
+                  aria-label="Carousel image crop"
+                  onChange={(event) => {
+                    const next = event.target.value
+                    if (!isCarouselCrop(next)) return
+                    setCarouselCrop(next)
+                    setNotice('')
+                  }}
+                >
+                  <option value="none">None</option>
+                  <option value="portrait">Portrait</option>
+                  <option value="landscape">Landscape</option>
+                </select>
+              </label>
               <label className="admin-toggle">
                 <input
                   type="checkbox"

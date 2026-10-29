@@ -6,13 +6,17 @@ import { homepageSeed, type HomepageDocument, type HomepageSlide } from '../../s
 import { worksSeed, type WorkItem } from '../../src/data/works-seed.ts'
 import { aboutImageUrls, parseAboutList } from './about.ts'
 import { imageUrls, parseHomepageDocument } from './homepage.ts'
+import { probeImage } from './probe-image.ts'
 import { imageIdFromUrl, parseWorksList } from './works.ts'
 
 const LIST_KEY = 'list'
 const HOMEPAGE_KEY = 'homepage'
 const ABOUT_KEY = 'about'
+const IMAGE_SIZES_KEY = 'image-sizes'
 const SEED_VERSION_KEY = 'seed-version'
 const SEED_VERSION = createHash('sha256').update(JSON.stringify(worksSeed)).update(JSON.stringify(homepageSeed)).digest('hex')
+
+export type ImageSizeMap = Record<string, [number, number]>
 
 const requestContext = new AsyncLocalStorage<Request>()
 let seeding: Promise<void> | null = null
@@ -35,7 +39,73 @@ export async function loadWorks() {
   if (stored == null) return worksSeed
   const works = parseWorksList(stored)
   if (!works) throw new Error('Stored works could not be read.')
-  return works
+  const migrated = migrateWorksFromSeed(works)
+  if (migrated !== works) await saveWorks(migrated)
+  return migrated
+}
+
+/**
+ * Apply template fields from seed when a stored work is still on the pre-template shape.
+ * Prefer the work's own lead/gallery images for scroll-story chapters so uploaded assets stay put.
+ */
+function migrateWorksFromSeed(works: WorkItem[]) {
+  const seedBySlug = new Map(worksSeed.map((work) => [work.slug, work]))
+  let changed = false
+  const next = works.map((work) => {
+    if (work.template) return work
+    const seed = seedBySlug.get(work.slug)
+    if (!seed?.template) return work
+    changed = true
+    if (seed.template === 'scroll-story') {
+      return {
+        ...work,
+        template: 'scroll-story' as const,
+        ...scrollStoryFromWork(work, seed),
+      }
+    }
+    const migrated: WorkItem = { ...work, template: seed.template }
+    if (seed.mastheadText) migrated.mastheadText = seed.mastheadText
+    return migrated
+  })
+  return changed ? next : works
+}
+
+function scrollStoryFromWork(work: WorkItem, seed: WorkItem) {
+  const frames = [
+    work.image,
+    ...(work.images ?? []).map((item) => item.image),
+  ].filter(Boolean)
+
+  if (frames.length === 0 && seed.scrollSteps?.length) {
+    return {
+      scrollSteps: seed.scrollSteps,
+      blocks: seed.blocks ?? work.blocks,
+      scrollClosingImage: null,
+    }
+  }
+
+  const seedParagraphs = seed.scrollSteps?.[0]?.paragraphs ?? []
+  const seedClosing = seed.scrollClosingImage
+  const closingBlock = seedClosing?.src
+    ? [{
+        type: 'image' as const,
+        image: seedClosing.src,
+        alt: seedClosing.alt || `${work.name}, closing view`,
+        caption: '',
+        size: 'full' as const,
+        align: 'center' as const,
+      }]
+    : []
+
+  return {
+    scrollSteps: frames.map((image, index) => ({
+      image,
+      alt: `${work.name}, view ${index + 1}`,
+      paragraphs: index === 0 ? seedParagraphs : [],
+    })),
+    blocks: [...(work.blocks ?? []), ...closingBlock],
+    scrollClosingImage: null,
+  }
 }
 
 export async function saveWorks(works: WorkItem[]) {
@@ -45,7 +115,7 @@ export async function saveWorks(works: WorkItem[]) {
 export async function loadHomepage(): Promise<HomepageDocument> {
   await ensureSeed()
   const stored = await worksStore().get(HOMEPAGE_KEY, { type: 'json' })
-  if (stored == null) return { slides: homepageSeed, showCaptions: false }
+  if (stored == null) return { slides: homepageSeed, showCaptions: false, carouselCrop: 'none' }
   const homepage = parseHomepageDocument(stored)
   if (!homepage) throw new Error('Stored homepage could not be read.')
   return homepage
@@ -72,8 +142,19 @@ export function contentImageUrls(works: WorkItem[], slides: HomepageSlide[], abo
   return [...imageUrls(works, slides), ...aboutImageUrls(about)]
 }
 
-export async function saveImage(id: string, bytes: ArrayBuffer, contentType: string) {
-  await imageStore().set(id, bytes, { metadata: { contentType } })
+export async function saveImage(
+  id: string,
+  bytes: ArrayBuffer,
+  contentType: string,
+  size?: { width: number; height: number },
+) {
+  const metadata: Record<string, string> = { contentType }
+  if (size) {
+    metadata.width = String(size.width)
+    metadata.height = String(size.height)
+  }
+  await imageStore().set(id, bytes, { metadata })
+  if (size) await Promise.resolve(registerImageSize(`/api/images/${id}`, size.width, size.height))
 }
 
 export async function readImage(id: string) {
@@ -83,7 +164,116 @@ export async function readImage(id: string) {
   return {
     bytes: result.data,
     contentType: typeof contentType === 'string' ? contentType : 'application/octet-stream',
+    width: intMeta(result.metadata.width),
+    height: intMeta(result.metadata.height),
   }
+}
+
+export async function loadImageSizes(): Promise<ImageSizeMap> {
+  const stored = await worksStore().get(IMAGE_SIZES_KEY, { type: 'json' })
+  return parseImageSizeMap(stored) ?? {}
+}
+
+let imageSizeWrite: Promise<void> = Promise.resolve()
+
+export function registerImageSize(url: string, width: number, height: number) {
+  imageSizeWrite = imageSizeWrite.then(async () => {
+    const sizes = await loadImageSizes()
+    sizes[url] = [width, height]
+    await worksStore().setJSON(IMAGE_SIZES_KEY, sizes)
+  })
+  return imageSizeWrite
+}
+
+export async function saveImageSizes(sizes: ImageSizeMap) {
+  imageSizeWrite = imageSizeWrite.then(async () => {
+    await worksStore().setJSON(IMAGE_SIZES_KEY, sizes)
+  })
+  return imageSizeWrite
+}
+
+export async function listImageIds() {
+  const keys: string[] = []
+  for await (const page of imageStore().list({ paginate: true })) {
+    for (const blob of page.blobs ?? []) keys.push(blob.key)
+  }
+  return keys
+}
+
+export async function backfillImageSizes() {
+  const sizes = await loadImageSizes()
+  const keys = await listImageIds()
+  let updated = 0
+  let skipped = 0
+  let failed = 0
+
+  for (const id of keys) {
+    const url = `/api/images/${id}`
+    const existing = sizes[url]
+    if (existing) {
+      skipped += 1
+      continue
+    }
+
+    const result = await imageStore().getWithMetadata(id, { type: 'arrayBuffer' })
+    if (!result?.data) {
+      failed += 1
+      continue
+    }
+
+    const contentType = typeof result.metadata.contentType === 'string'
+      ? result.metadata.contentType
+      : 'application/octet-stream'
+    let width = intMeta(result.metadata.width)
+    let height = intMeta(result.metadata.height)
+
+    if (!width || !height) {
+      const probed = probeImage(result.data)
+      if (!probed) {
+        failed += 1
+        continue
+      }
+      width = probed.width
+      height = probed.height
+      await imageStore().set(id, result.data, {
+        metadata: {
+          contentType,
+          width: String(width),
+          height: String(height),
+        },
+      })
+    }
+
+    sizes[url] = [width, height]
+    updated += 1
+  }
+
+  await saveImageSizes(sizes)
+  return { total: keys.length, updated, skipped, failed, sizes }
+}
+
+function intMeta(value: unknown) {
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) return value
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    const n = Number(value)
+    if (n > 0) return n
+  }
+  return undefined
+}
+
+function parseImageSizeMap(value: unknown): ImageSizeMap | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const sizes: ImageSizeMap = {}
+  for (const [key, entry] of Object.entries(value)) {
+    if (!Array.isArray(entry) || entry.length !== 2) continue
+    const width = entry[0]
+    const height = entry[1]
+    if (typeof width !== 'number' || typeof height !== 'number') continue
+    if (!Number.isInteger(width) || !Number.isInteger(height)) continue
+    if (width < 1 || height < 1) continue
+    sizes[key] = [width, height]
+  }
+  return sizes
 }
 
 function ensureSeed() {
@@ -171,6 +361,8 @@ export async function deleteUnusedImages(previousUrls: string[], nextUrls: strin
     const id = imageIdFromUrl(url)
     if (id && !keep.has(id)) remove.add(id)
   }
+  if (remove.size === 0) return
+
   await Promise.all([...remove].map(async (id) => {
     try {
       await imageStore().delete(id)
@@ -178,4 +370,18 @@ export async function deleteUnusedImages(previousUrls: string[], nextUrls: strin
       // A missing blob should not block saving the work.
     }
   }))
+
+  imageSizeWrite = imageSizeWrite.then(async () => {
+    const sizes = await loadImageSizes()
+    let changed = false
+    for (const id of remove) {
+      const key = `/api/images/${id}`
+      if (key in sizes) {
+        delete sizes[key]
+        changed = true
+      }
+    }
+    if (changed) await worksStore().setJSON(IMAGE_SIZES_KEY, sizes)
+  })
+  await imageSizeWrite
 }

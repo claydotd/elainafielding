@@ -1,13 +1,12 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useWorks } from '../context/useWorks'
 import type { AboutBlock } from '../data/about'
-import type { WorkImage, WorkItem, WorkPiece } from '../data/works'
+import type { MastheadText, ScrollStoryStep, WorkItem, WorkPiece, WorkTemplate } from '../data/works'
 import { workListHref } from '../lib/work-list'
 import { fittedImage } from '../lib/fitted-image'
 import { AboutContent } from './AboutContent'
-import { WorkCarousel } from './Carousels'
 import { FadeImage } from './FadeImage'
+import { ScrollStoryHero } from './ScrollStoryHero'
 import { WorkMeta } from './WorkGalleryItem'
 
 type WorkDetailsTemplateProps = {
@@ -17,9 +16,10 @@ type WorkDetailsTemplateProps = {
   location?: string
   description: string
   image: string
-  images: WorkImage[]
-  showCarousel?: boolean
   blocks?: AboutBlock[]
+  template?: WorkTemplate
+  mastheadText?: MastheadText
+  scrollSteps?: ScrollStoryStep[]
 }
 
 export function BackToWork({ slug }: { slug: string }) {
@@ -54,54 +54,108 @@ export function WorkDetailsTemplate({
   location,
   description,
   image,
-  images,
-  showCarousel = true,
   blocks = [],
+  template = 'standard',
+  mastheadText = 'light',
+  scrollSteps = [],
 }: WorkDetailsTemplateProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const carouselVisible = showCarousel && images.length > 0
-
   return (
     <div className="work-details-container">
       <BackToWork slug={slug} />
-      <article className="work-details">
-        <div className="work-details__text">
-          <div className="work-details__meta">
-            <WorkMeta pieces={pieces} location={location} />
+      {template === 'scroll-story' ? (
+        <ScrollStoryHero
+          pieces={pieces}
+          location={location}
+          description={description}
+          steps={scrollSteps}
+          fallbackTitle={title}
+        />
+      ) : template === 'masthead' ? (
+        <MastheadHero
+          title={title}
+          pieces={pieces}
+          location={location}
+          image={image}
+          text={mastheadText}
+        />
+      ) : (
+        <article className="work-details">
+          <div className="work-details__text">
+            <div className="work-details__meta">
+              <WorkMeta pieces={pieces} location={location} />
+            </div>
+            {description ? (
+              <div className="work-details__description">
+                <p>{description}</p>
+              </div>
+            ) : null}
           </div>
-          {description ? (
-            <div className="work-details__description">
-              <p>{description}</p>
+
+          {image ? (
+            <div className="work-details__media">
+              <FadeImage
+                {...fittedImage(image, 'hero', '(max-width: 640px) 66vw, 55vw')}
+                alt={title}
+                decoding="async"
+                loading="eager"
+                fetchPriority="high"
+              />
             </div>
           ) : null}
+        </article>
+      )}
+
+      {template === 'masthead' && description ? (
+        <div className="work-details__description work-details__description--after-hero">
+          <p>{description}</p>
         </div>
+      ) : null}
 
-        {image ? (
-          <div className="work-details__media">
-            <FadeImage
-              {...fittedImage(image, 'hero', '(max-width: 640px) 66vw, 55vw')}
-              alt={title}
-              decoding="async"
-              loading="eager"
-              fetchPriority="high"
-            />
-          </div>
-        ) : null}
+      {blocks.length > 0 ? (
+        <div className="work-details__blocks">
+          <AboutContent blocks={blocks} />
+        </div>
+      ) : null}
 
-        {carouselVisible ? (
-          <div className="work-gallery">
-            <WorkCarousel images={images} currentIndex={currentIndex} setCurrentIndex={setCurrentIndex} />
-          </div>
-        ) : null}
-
-        {blocks.length > 0 ? (
-          <div className="work-details__blocks">
-            <AboutContent blocks={blocks} />
-          </div>
-        ) : null}
-      </article>
       <WorkNeighbors slug={slug} />
     </div>
+  )
+}
+
+function MastheadHero({
+  title,
+  pieces,
+  location,
+  image,
+  text,
+}: {
+  title: string
+  pieces: WorkPiece[]
+  location?: string
+  image: string
+  text: MastheadText
+}) {
+  return (
+    <section className={`work-masthead work-masthead--${text}`}>
+      {image ? (
+        <div className="work-masthead__media">
+          <FadeImage
+            {...fittedImage(image, 'hero', '100vw')}
+            alt={title}
+            decoding="async"
+            loading="eager"
+            fetchPriority="high"
+          />
+        </div>
+      ) : null}
+      <div className="work-masthead__overlay">
+        <div className="work-masthead__meta">
+          <WorkMeta heading="h1" pieces={pieces} location={location} />
+        </div>
+      </div>
+      {/* Scroll room while the lead stays sticky and unobstructed, then blocks begin. */}
+      <div className="work-masthead__runway" aria-hidden="true" />
+    </section>
   )
 }
 

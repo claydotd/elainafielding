@@ -1,7 +1,13 @@
-export const ABOUT_BLOCK_LIMIT = 40
+import type { CarouselCrop } from './carousel'
+import type { ImageCrop } from './image-crop'
 
-export type AboutAlign = 'left' | 'center' | 'right'
+export const ABOUT_BLOCK_LIMIT = 40
+export const CAROUSEL_IMAGE_LIMIT = 40
+
+export type AboutAlign = 'left' | 'center' | 'right' | 'justify'
 export type AboutWidth = 'full' | 'medium' | 'small'
+export type AboutImageAlign = 'left' | 'center' | 'right'
+export type AboutImageSize = 'small' | 'medium' | 'large' | 'full'
 export type AboutImageSide = 'start' | 'end'
 
 export type AboutTextBlock = {
@@ -16,6 +22,10 @@ export type AboutImageBlock = {
   image: string
   alt: string
   caption: string
+  size: AboutImageSize
+  align: AboutImageAlign
+  /** Crop the image to a fixed frame. Defaults to original (natural aspect). */
+  crop?: ImageCrop
 }
 
 export type AboutSplitBlock = {
@@ -27,7 +37,21 @@ export type AboutSplitBlock = {
   imageSide: AboutImageSide
 }
 
-export type AboutBlock = AboutTextBlock | AboutImageBlock | AboutSplitBlock
+/** Work-page only. About admin does not offer this type. */
+export type AboutCarouselSlide = {
+  image: string
+  caption: string
+}
+
+export type AboutCarouselBlock = {
+  type: 'carousel'
+  images: AboutCarouselSlide[]
+  crop: CarouselCrop
+}
+
+export type AboutBlock = AboutTextBlock | AboutImageBlock | AboutSplitBlock | AboutCarouselBlock
+
+export type AboutPageBlock = AboutTextBlock | AboutImageBlock | AboutSplitBlock
 
 const intro = 'Elaina Fielding (she/her) is a sculpture artist based in Scotland. She graduated with a First Class BA in Fine Art from Central Saint Martins in 2023, and was shortlisted in her final year for the LVMH / Maison 0 Award for Sustainable Practice. She received the Bird and Blend Sustainabilitea Bursary Award for her creation of sustainable sculpture for the Brighton Fringe, and has made performative sculptural work for the Moon Kim Theatre Company. In 2026 she was selected to deliver her own workshop series with Fruitmarket Gallery, as part of the Fresh Fruit / Germinate young artists programme. She is a current studio holder at Edinburgh Sculpture Workshop, where she is using VACMA funding to expand her practice into foundry work and stone carving.'
 
@@ -35,7 +59,7 @@ const materials = 'Elaina works with discarded and salvaged materials to create 
 
 const theatrics = 'She is interested in the theatrics of the ordinary, often using recognisable imagery to explore how the commonplace can tip to the strange and unfamiliar. Curious about the merging of body and object, she is increasingly drawn to tools, physical and digital, as uniquely human artefacts, exploring them as layered objects with their own evolutionary and bodily potential.'
 
-export const aboutSeed: AboutBlock[] = [
+export const aboutSeed: AboutPageBlock[] = [
   {
     type: 'text',
     html: `<p>${intro}</p>`,

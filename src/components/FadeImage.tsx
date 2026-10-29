@@ -35,7 +35,7 @@ export function FadeImage({
       width={width ?? size?.width}
       height={height ?? size?.height}
       className={['fade-image', loaded ? 'is-loaded' : '', className].filter(Boolean).join(' ')}
-      style={size ? { ...style, aspectRatio: `${size.width} / ${size.height}` } : style}
+      style={size ? { aspectRatio: `${size.width} / ${size.height}`, ...style } : style}
       onLoad={(event) => {
         setLoadedSrc(src)
         onLoad?.(event)

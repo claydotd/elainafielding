@@ -110,10 +110,54 @@ const sizes: Record<string, readonly [number, number]> = {
   '/images/works/fff5908e-bef9-47f0-9476-027d4e3ffd5d.jpg': [1618, 2400],
 }
 
+type SizeTuple = readonly [number, number]
+
+let remoteSizes: Record<string, SizeTuple> = {}
+
+export function setRemoteImageSizes(next: Record<string, SizeTuple>) {
+  remoteSizes = next
+}
+
+export function rememberImageSize(src: string, width: number, height: number) {
+  const path = imagePath(src)
+  remoteSizes = { ...remoteSizes, [path]: [width, height] }
+}
+
 export function imageSize(src: string) {
   const path = imagePath(src)
-  const size = sizes[path]
+  const size = remoteSizes[path] ?? sizes[path] ?? staticFallback(path)
   return size ? { width: size[0], height: size[1] } : undefined
+}
+
+export async function loadRemoteImageSizes() {
+  try {
+    const response = await fetch('/api/image-sizes', { cache: 'no-store' })
+    if (!response.ok) return false
+    const data: unknown = await response.json()
+    if (!data || typeof data !== 'object' || !('sizes' in data)) return false
+    const incoming = (data as { sizes: unknown }).sizes
+    if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) return false
+    const next: Record<string, SizeTuple> = {}
+    for (const [key, entry] of Object.entries(incoming)) {
+      if (!Array.isArray(entry) || entry.length !== 2) continue
+      const width = entry[0]
+      const height = entry[1]
+      if (typeof width !== 'number' || typeof height !== 'number') continue
+      if (!Number.isInteger(width) || !Number.isInteger(height)) continue
+      if (width < 1 || height < 1) continue
+      next[imagePath(key)] = [width, height]
+    }
+    remoteSizes = { ...remoteSizes, ...next }
+    return true
+  } catch {
+    return false
+  }
+}
+
+function staticFallback(path: string) {
+  const uploaded = path.match(/^\/api\/images\/([0-9a-f-]{36})$/i)
+  if (!uploaded) return undefined
+  return sizes[`/images/works/${uploaded[1].toLowerCase()}.jpg`]
 }
 
 function imagePath(src: string) {
@@ -126,6 +170,6 @@ function imagePath(src: string) {
   if (base && path.startsWith(`${base}/`)) path = path.slice(base.length)
   if (!path.startsWith('/')) path = `/${path}`
   const uploaded = path.match(/^\/api\/images\/([0-9a-f-]{36})$/i)
-  if (uploaded) return `/images/works/${uploaded[1].toLowerCase()}.jpg`
+  if (uploaded) return `/api/images/${uploaded[1].toLowerCase()}`
   return path
 }

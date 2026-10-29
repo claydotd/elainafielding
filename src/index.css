@@ -1,3 +1,5 @@
+
+
 /* ==========================================================================
    Design tokens
    ========================================================================== */
@@ -7,6 +9,7 @@
   --color-surface: #93898d;
   --color-text: #1a1a1a;
   --color-text-muted: #93898d;
+  --color-text-grey: #bbbbbb;
   --color-text-watermark: #d7d7d7;
   --color-border: #e2ddd6;
   --color-accent: #f5e8d1;
@@ -14,7 +17,7 @@
   --color-nav-bg: #ffffff;
 
   /* Typography */
-  --font-sans: "corbel", sans-serif;
+  --font-sans: "motiva-sans", sans-serif;
   --font-display: "new-atten-round", sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
@@ -47,6 +50,8 @@
 
   /* Layout */
   --nav-height: 4rem;
+  /* Sticky work heroes sit just below the real header (Layout syncs this). */
+  --header-offset: var(--nav-height);
   --content-max: 72rem;
   --content-pad: clamp(1.25rem, 4vw, 2.5rem);
 
@@ -284,7 +289,7 @@ button {
   font-size: var(--text-sm);
   font-weight: 700;
   line-height: var(--leading-normal);
-  color: var(--color-text-muted);
+  color: var(--color-text-grey);
   text-align: center;
 }
 
@@ -400,6 +405,61 @@ button {
 .work-carousel--captions .carousel-prev,
 .work-carousel--captions .carousel-next {
   top: calc(50% - 1.25rem);
+}
+
+/* Cropped carousel frames: standardised portrait (3:4) or landscape (4:3). */
+.carousel-crop {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.homepage-carousel--crop-portrait .carousel-link,
+.homepage-carousel--crop-landscape .carousel-link {
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+}
+
+.homepage-carousel--crop-portrait .carousel-crop,
+.homepage-carousel--crop-landscape .carousel-crop {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+
+.homepage-carousel--crop-portrait .carousel-crop {
+  aspect-ratio: 3 / 4;
+}
+
+.homepage-carousel--crop-landscape .carousel-crop {
+  aspect-ratio: 4 / 3;
+}
+
+.work-carousel--crop-portrait .carousel-crop,
+.work-carousel--crop-landscape .carousel-crop {
+  width: 100%;
+}
+
+.work-carousel--crop-portrait .carousel-crop {
+  aspect-ratio: 3 / 4;
+}
+
+.work-carousel--crop-landscape .carousel-crop {
+  aspect-ratio: 4 / 3;
+}
+
+.homepage-carousel--crop-portrait .carousel-crop img,
+.homepage-carousel--crop-landscape .carousel-crop img,
+.work-carousel--crop-portrait .carousel-crop img,
+.work-carousel--crop-landscape .carousel-crop img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
 }
 
 @media (max-width: 640px) {
@@ -605,6 +665,7 @@ a.work-gallery__item:hover .work-gallery__name {
   font-weight: 500;
   letter-spacing: var(--tracking-tight);
   color: var(--color-text);
+  padding-bottom: var(--space-1);
 }
 
 .work-gallery__subtitle,
@@ -617,7 +678,7 @@ a.work-gallery__item:hover .work-gallery__name {
 }
 
 .work-gallery__materials {
-  font-style: italic;
+  /* font-style: italic; */
 }
 
 @media (max-width: 640px) {
@@ -659,7 +720,7 @@ a.work-gallery__item:hover .work-gallery__name {
   margin-bottom: var(--space-8);
   font-size: var(--text-sm);
   text-align: center;
-  font-style: italic;
+  color: var(--color-text-grey);
 }
 
 .work-pagination {
@@ -733,7 +794,7 @@ a.work-gallery__item:hover .work-gallery__name {
 .work-details__meta {
   padding-bottom: var(--space-4);
   min-width: 0;
-  align-self: center;
+  align-self: flex-start;
 }
 
 .work-details__meta .work-gallery__meta {
@@ -841,9 +902,23 @@ a.work-gallery__item:hover .work-gallery__name {
 }
 
 .work-details__description {
+  padding-top: var(--space-6);
   max-width: 36rem;
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
+  padding-right: var(--space-3);
+  text-align: justify;
+}
+
+.work-details__description--after-hero {
+  margin-top: var(--space-8);
+  padding-top: 0;
+}
+
+.work-details-container > .work-details__blocks {
+  margin-top: var(--space-10);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .work-details > .work-gallery,
@@ -852,6 +927,107 @@ a.work-gallery__item:hover .work-gallery__name {
   margin-top: var(--space-10);
   min-width: 0;
   max-width: 100%;
+}
+
+/* Masthead: sticky lead, meta scrolls away, then blocks. */
+.work-masthead {
+  --masthead-offset: var(--header-offset);
+  --masthead-frame: calc(100svh - var(--masthead-offset) - var(--space-6));
+  --masthead-text: var(--color-bg);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.work-masthead--dark {
+  --masthead-text: var(--color-text);
+}
+
+.work-masthead--med {
+  --masthead-text: var(--color-text-grey);
+}
+
+.work-masthead--light {
+  --masthead-text: var(--color-bg);
+}
+
+.work-masthead__media {
+  grid-column: 1;
+  grid-row: 1;
+  position: sticky;
+  top: var(--masthead-offset);
+  z-index: 0;
+  align-self: start;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.work-masthead__media img {
+  width: auto;
+  max-width: 100%;
+  max-height: var(--masthead-frame);
+  object-fit: contain;
+  object-position: top center;
+}
+
+.work-masthead__overlay {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  z-index: 1;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--space-6);
+  padding-inline: var(--space-4);
+  pointer-events: none;
+}
+
+.work-masthead__meta {
+  pointer-events: auto;
+  max-width: 36rem;
+  min-width: 0;
+}
+
+.work-masthead__meta .work-gallery__meta {
+  padding-block: 0;
+}
+
+.work-masthead__meta .work-gallery__name,
+.work-masthead__meta .work-gallery__subtitle,
+.work-masthead__meta .work-gallery__materials,
+.work-masthead__meta .work-gallery__dimensions,
+.work-masthead__meta .work-gallery__location {
+  color: var(--masthead-text);
+}
+
+/* Keeps the lead sticky after meta clears so it can be viewed alone before blocks. */
+.work-masthead__runway {
+  grid-column: 1;
+  grid-row: 2;
+  height: var(--masthead-frame);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .work-masthead__media img {
+    width: 100%;
+    height: auto;
+    max-height: min(var(--masthead-frame), 70vh);
+  }
+
+  .work-masthead__overlay {
+    padding-inline: var(--space-4);
+    padding-top: var(--space-4);
+  }
+
+  .work-masthead__runway {
+    height: min(var(--masthead-frame), 70vh);
+  }
 }
 
 @media (max-width: 640px) {
@@ -892,6 +1068,10 @@ a.work-gallery__item:hover .work-gallery__name {
     width: 100%;
     margin-top: 0;
     align-self: stretch;
+  }
+
+  .work-details-container > .work-details__blocks {
+    margin-top: var(--space-8);
   }
 }
 /* About Page */
@@ -959,6 +1139,10 @@ a.work-gallery__item:hover .work-gallery__name {
   align-self: center;
 }
 
+.justify-aligned {
+  text-align: justify;
+}
+
 .width-medium {
   max-width: 50rem;
 }
@@ -983,36 +1167,101 @@ a.work-gallery__item:hover .work-gallery__name {
 }
 
 .about-content__image {
-  align-items: flex-start;
-  align-self: flex-start;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: var(--space-2);
+  min-width: 0;
+  width: 100%;
+}
+
+.about-content__image.left-aligned {
+  align-self: flex-start;
+  align-items: flex-start;
+  margin-inline: 0 auto;
+}
+
+.about-content__image.center-aligned {
+  align-self: center;
+  align-items: center;
+  margin-inline: auto;
+}
+
+.about-content__image.right-aligned {
+  align-self: flex-end;
+  align-items: flex-end;
+  margin-inline: auto 0;
+}
+
+.about-content__image.image-size-small {
+  max-width: 28%;
+}
+
+.about-content__image.image-size-medium {
+  max-width: 55%;
+}
+
+.about-content__image.image-size-large {
+  max-width: 75%;
+}
+
+.about-content__image img {
+  width: 100%;
+  max-width: 100%;
+  object-fit: stretch;
+}
+
+/* Cropped image frames: portrait (3:4), landscape (4:3), or square (1:1). */
+.about-content__image-crop {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  width: 100%;
   min-width: 0;
 }
 
+.about-content__image--crop-portrait .about-content__image-crop {
+  aspect-ratio: 3 / 4;
+}
+
+.about-content__image--crop-landscape .about-content__image-crop {
+  aspect-ratio: 4 / 3;
+}
+
+.about-content__image--crop-square .about-content__image-crop {
+  aspect-ratio: 1 / 1;
+}
+
+.about-content__image--crop-portrait .about-content__image-crop img,
+.about-content__image--crop-landscape .about-content__image-crop img,
+.about-content__image--crop-square .about-content__image-crop img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+}
+
 .about-content__image-caption {
+  padding-top: var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   text-align: center;
   font-weight: 700;
+  color: var(--color-text-grey);
 }
 
-.about-content img,
+.about-content__image img,
 .portrait-image {
-  width: auto;
+  /* width: auto; */
   max-width: 100%;
   height: auto;
-  max-height: 68vh;
+  /* max-height: 68vh; */
   margin-inline: auto;
   object-fit: contain;
 }
 
 @media (max-width: 800px) {
-  .bio-text {
-    text-align: center;
-  }
 
   .about-split,
   .about-split--image-start,
@@ -1020,21 +1269,22 @@ a.work-gallery__item:hover .work-gallery__name {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .about-content__image {
-    width: calc(100% + 2 * var(--content-pad));
-    margin-inline: calc(-1 * var(--content-pad));
-    padding: var(--space-4);
+  .about-content__image,
+  .about-content__image.left-aligned,
+  .about-content__image.center-aligned,
+  .about-content__image.right-aligned {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
+    align-self: stretch;
+    align-items: center;
   }
 
-  .about-content img,
+  .about-content__image img,
   .portrait-image {
     width: 100%;
     max-height: none;
     margin-inline: 0;
-  }
-
-  .about-content__image-caption {
-    padding-inline: var(--content-pad);
   }
 }
 
@@ -1076,6 +1326,13 @@ a.work-gallery__item:hover .work-gallery__name {
 
 .admin-section__header h2 {
   margin: 0;
+}
+
+.admin-subheading {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
 }
 
 .admin-field {

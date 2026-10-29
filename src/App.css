@@ -18,17 +18,18 @@
 /* Shared nav pieces */
 
 .nav-brand {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: var(--text-3xl);
-  font-weight: 300;
+  font-weight: 700;
   letter-spacing: var(--tracking-tight);
   text-decoration: none;
-  color: var(--color-text);
+  color: #bbbbbb;
   white-space: nowrap;
   transition: color var(--duration-slow) var(--ease);
   /* padding-left: var(--space-1); */
   padding-right: var(--space-4);
-  line-height: 1;
+  line-height: 1.1;
+  letter-spacing: 0.015em;
 }
 
 .nav-brand:hover {
@@ -223,6 +224,13 @@
   animation: page-fade-in var(--duration-slow) var(--ease) both;
 }
 
+.about-page {
+  align-self: center;
+  min-height: 40vh;
+  animation: page-fade-in var(--duration-slow) var(--ease) both;
+  width: min(100%, 36rem);
+}
+
 .contact-form {
   animation: page-fade-in var(--duration-slow) var(--ease) both;
 }
@@ -257,7 +265,7 @@
 .page-container {
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: var(--content-pad);
+  padding: var(--space-2) var(--content-pad) var(--content-pad);
 }
 
 .page-container--about {
@@ -269,6 +277,66 @@
 
 .page-container--about .page {
   min-height: 0;
+}
+
+.page-container--not-found {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100svh - var(--nav-height) - 6rem);
+  padding-block: var(--space-8);
+}
+
+.not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 28rem;
+  min-height: 0;
+}
+
+.not-found__code {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text-watermark);
+}
+
+.not-found__title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+
+.not-found__message {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.not-found__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: var(--space-3) 0 0;
+}
+
+.not-found__actions a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  text-transform: lowercase;
+  letter-spacing: var(--tracking-wide);
+  font-size: var(--text-sm);
+  transition: color var(--duration-fast) var(--ease);
+}
+
+.not-found__actions a:hover {
+  color: var(--color-text);
 }
 
 /* Footer */
@@ -307,6 +375,7 @@
 
 .copyright {
   font-size: var(--text-xs);
+  color: var(--color-text-grey);
 }
 
 .insta-icon {

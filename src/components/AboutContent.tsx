@@ -1,7 +1,18 @@
-import type { AboutBlock, AboutImageBlock, AboutSplitBlock, AboutTextBlock } from '../data/about'
-import { aboutTextClass } from '../lib/about'
+import { useState, type ReactNode } from 'react'
+import type {
+  AboutBlock,
+  AboutCarouselBlock,
+  AboutImageAlign,
+  AboutImageBlock,
+  AboutImageSize,
+  AboutSplitBlock,
+  AboutTextBlock,
+} from '../data/about'
+import { readImageCrop, type ImageCrop } from '../data/image-crop'
+import { aboutImageClass, aboutTextClass } from '../lib/about'
 import { fittedImage } from '../lib/fitted-image'
 import { sanitizeHtml } from '../lib/sanitize-html'
+import { WorkCarousel } from './Carousels'
 import { FadeImage } from './FadeImage'
 
 export function AboutContent({ blocks }: { blocks: AboutBlock[] }) {
@@ -16,7 +27,19 @@ export function AboutContent({ blocks }: { blocks: AboutBlock[] }) {
 
 function AboutBlockView({ block }: { block: AboutBlock }) {
   if (block.type === 'text') return <TextBlock block={block} />
-  if (block.type === 'image') return <AboutFigure image={block.image} alt={block.alt} caption={block.caption} />
+  if (block.type === 'image') {
+    return (
+      <AboutFigure
+        image={block.image}
+        alt={block.alt}
+        caption={block.caption}
+        size={block.size}
+        align={block.align}
+        crop={block.crop}
+      />
+    )
+  }
+  if (block.type === 'carousel') return <CarouselBlock block={block} />
   return <SplitBlock block={block} />
 }
 
@@ -40,18 +63,57 @@ function SplitBlock({ block }: { block: AboutSplitBlock }) {
   )
 }
 
+function CarouselBlock({ block }: { block: AboutCarouselBlock }) {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  if (block.images.length === 0) return null
+  return (
+    <div className="work-gallery">
+      <WorkCarousel
+        images={block.images}
+        carouselCrop={block.crop}
+        currentIndex={currentIndex}
+        setCurrentIndex={setCurrentIndex}
+      />
+    </div>
+  )
+}
+
 function Bio({ html, className }: { html: string; className: string }) {
   const clean = sanitizeHtml(html)
   if (!clean) return null
   return <div className={className} dangerouslySetInnerHTML={{ __html: clean }} />
 }
 
-function AboutFigure({ image, alt, caption }: Pick<AboutImageBlock, 'image' | 'alt' | 'caption'>) {
+function AboutFigure({
+  image,
+  alt,
+  caption,
+  size,
+  align,
+  crop,
+}: Pick<AboutImageBlock, 'image' | 'alt' | 'caption'> & {
+  size?: AboutImageSize
+  align?: AboutImageAlign
+  crop?: ImageCrop
+}) {
   if (!image) return null
+  const resolvedCrop = readImageCrop(crop)
   return (
-    <div className="about-content__image">
-      <FadeImage {...fittedImage(image, 'about')} alt={alt} decoding="async" />
+    <div className={aboutImageClass(align, size, resolvedCrop)}>
+      <ImageCropFrame crop={resolvedCrop}>
+        <FadeImage
+          {...fittedImage(image, 'about')}
+          alt={alt}
+          decoding="async"
+          style={resolvedCrop === 'original' ? undefined : { aspectRatio: 'unset' }}
+        />
+      </ImageCropFrame>
       {caption ? <p className="about-content__image-caption">{caption}</p> : null}
     </div>
   )
+}
+
+function ImageCropFrame({ crop, children }: { crop: ImageCrop; children: ReactNode }) {
+  if (crop === 'original') return children
+  return <div className="about-content__image-crop">{children}</div>
 }

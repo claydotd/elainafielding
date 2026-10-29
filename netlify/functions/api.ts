@@ -4,7 +4,8 @@ import { clearedCookie, createSession, hasSession, passwordsMatch, requireAdmin,
 import { parseAboutInput } from '../lib/about.ts'
 import { parseHomepageInput, retargetSlides } from '../lib/homepage.ts'
 import { json, readJson, routePath } from '../lib/http.ts'
-import { contentImageUrls, deleteUnusedImages, loadAbout, loadHomepage, loadWorks, readImage, runWithRequest, saveAbout, saveHomepage, saveImage, saveWorks } from '../lib/store.ts'
+import { parseImageSizeHeaders, probeImage } from '../lib/probe-image.ts'
+import { backfillImageSizes, contentImageUrls, deleteUnusedImages, loadAbout, loadHomepage, loadImageSizes, loadWorks, readImage, runWithRequest, saveAbout, saveHomepage, saveImage, saveWorks } from '../lib/store.ts'
 import { insertionIndex, parseWorkInput } from '../lib/works.ts'
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024
@@ -20,12 +21,14 @@ async function route(req: Request) {
     if (path === '/api/works' && req.method === 'GET') return listWorks()
     if (path === '/api/homepage' && req.method === 'GET') return listHomepage()
     if (path === '/api/about' && req.method === 'GET') return listAbout()
+    if (path === '/api/image-sizes' && req.method === 'GET') return listImageSizes()
     if (path === '/api/admin/homepage' && req.method === 'PUT') return updateHomepage(req)
     if (path === '/api/admin/about' && req.method === 'PUT') return updateAbout(req)
     if (path === '/api/admin/login' && req.method === 'POST') return login(req)
     if (path === '/api/admin/logout' && req.method === 'POST') return logout(req)
     if (path === '/api/admin/session' && req.method === 'GET') return session(req)
     if (path === '/api/admin/uploads' && req.method === 'POST') return upload(req)
+    if (path === '/api/admin/image-sizes/backfill' && req.method === 'POST') return backfillSizes(req)
     if (path === '/api/admin/works' && req.method === 'POST') return createWork(req)
     if (path === '/api/admin/works-order' && req.method === 'PUT') return reorderWorks(req)
 
@@ -60,6 +63,24 @@ async function listHomepage() {
 async function listAbout() {
   const blocks = await loadAbout()
   return json({ blocks }, 200, { 'cache-control': 'no-store' })
+}
+
+async function listImageSizes() {
+  const sizes = await loadImageSizes()
+  return json({ sizes }, 200, { 'cache-control': 'no-store' })
+}
+
+async function backfillSizes(req: Request) {
+  const denied = await requireAdmin(req)
+  if (denied) return denied
+  const result = await backfillImageSizes()
+  return json({
+    total: result.total,
+    updated: result.updated,
+    skipped: result.skipped,
+    failed: result.failed,
+    sizes: result.sizes,
+  })
 }
 
 async function updateHomepage(req: Request) {
@@ -120,9 +141,11 @@ async function upload(req: Request) {
   const bytes = await req.arrayBuffer()
   if (bytes.byteLength === 0) return json({ error: 'This image is empty.' }, 400)
   if (bytes.byteLength > MAX_IMAGE_BYTES) return json({ error: 'This image is over the 4 MB upload limit.' }, 413)
+  const size = probeImage(bytes) ?? parseImageSizeHeaders(req)
+  if (!size) return json({ error: 'Could not read this image’s dimensions.' }, 400)
   const id = crypto.randomUUID()
-  await saveImage(id, bytes, contentType)
-  return json({ url: `/api/images/${id}` })
+  await saveImage(id, bytes, contentType, size)
+  return json({ url: `/api/images/${id}`, width: size.width, height: size.height })
 }
 
 async function createWork(req: Request) {

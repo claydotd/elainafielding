@@ -1,3 +1,4 @@
+import { readCarouselCrop } from '../data/carousel'
 import type { HomepageDocument, HomepageSlide } from '../data/homepage'
 
 export async function fetchHomepage(): Promise<HomepageDocument | null> {
@@ -7,7 +8,12 @@ export async function fetchHomepage(): Promise<HomepageDocument | null> {
     const data: unknown = await response.json()
     if (!data || typeof data !== 'object' || !('slides' in data) || !Array.isArray(data.slides)) return null
     if (!data.slides.every(isHomepageSlide)) return null
-    return { slides: data.slides, showCaptions: 'showCaptions' in data && data.showCaptions === true }
+    const body = data as { slides: HomepageSlide[]; showCaptions?: unknown; carouselCrop?: unknown }
+    return {
+      slides: body.slides,
+      showCaptions: body.showCaptions === true,
+      carouselCrop: readCarouselCrop(body.carouselCrop),
+    }
   } catch {
     return null
   }

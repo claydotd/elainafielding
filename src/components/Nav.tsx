@@ -108,8 +108,11 @@ function useContactActive(pathname: string, hash: string) {
       return
     }
 
-    const contact = document.getElementById('contact')
-    if (!contact) return
+    // Contact mounts only after about content loads, so wait for #contact.
+    let contact: HTMLElement | null = document.getElementById('contact')
+    let cancelled = false
+    let frame = 0
+    let observer: MutationObserver | null = null
 
     function update() {
       if (!contact) return
@@ -119,19 +122,35 @@ function useContactActive(pathname: string, hash: string) {
       setActive(contact.getBoundingClientRect().top <= line)
     }
 
-    update()
-    let cancelled = false
-    const frame = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!cancelled) update()
+    function bind(el: HTMLElement) {
+      contact = el
+      update()
+      frame = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!cancelled) update()
+        })
       })
-    })
+      window.addEventListener('scroll', update, { passive: true })
+      window.addEventListener('resize', update)
+    }
 
-    window.addEventListener('scroll', update, { passive: true })
-    window.addEventListener('resize', update)
+    if (contact) {
+      bind(contact)
+    } else {
+      observer = new MutationObserver(() => {
+        const el = document.getElementById('contact')
+        if (!el) return
+        observer?.disconnect()
+        observer = null
+        bind(el)
+      })
+      observer.observe(document.body, { childList: true, subtree: true })
+    }
+
     return () => {
       cancelled = true
       cancelAnimationFrame(frame)
+      observer?.disconnect()
       window.removeEventListener('scroll', update)
       window.removeEventListener('resize', update)
     }

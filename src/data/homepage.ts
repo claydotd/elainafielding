@@ -1,3 +1,5 @@
+import type { CarouselCrop } from './carousel'
+
 export type HomepageSlide = {
   image: string
   /** Work this image opens, for example `a-household-item-2026` → `/work/a-household-item-2026`. */
@@ -8,6 +10,8 @@ export type HomepageSlide = {
 export type HomepageDocument = {
   slides: HomepageSlide[]
   showCaptions: boolean
+  /** Crop carousel images to a fixed frame. Defaults to none (natural aspect). */
+  carouselCrop?: CarouselCrop
 }
 
 export const homepageSeed: HomepageSlide[] = [

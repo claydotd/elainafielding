@@ -1,3 +1,4 @@
+import { isCarouselCrop, readCarouselCrop } from '../../src/data/carousel.ts'
 import type { HomepageDocument, HomepageSlide } from '../../src/data/homepage.ts'
 import type { WorkItem } from '../../src/data/works-seed.ts'
 import { isAllowedImage, workContentImageUrls } from './works.ts'
@@ -11,14 +12,19 @@ const MAX_CAPTION = 240
 export function parseHomepageDocument(value: unknown): HomepageDocument | null {
   if (Array.isArray(value)) {
     const slides = parseHomepageList(value)
-    return slides ? { slides, showCaptions: false } : null
+    return slides ? { slides, showCaptions: false, carouselCrop: 'none' } : null
   }
   if (!value || typeof value !== 'object' || !('slides' in value)) return null
-  const body = value as { slides: unknown; showCaptions?: unknown }
+  const body = value as { slides: unknown; showCaptions?: unknown; carouselCrop?: unknown }
   const slides = parseHomepageList(body.slides)
   if (!slides) return null
   if (body.showCaptions != null && typeof body.showCaptions !== 'boolean') return null
-  return { slides, showCaptions: body.showCaptions === true }
+  if (body.carouselCrop != null && !isCarouselCrop(body.carouselCrop)) return null
+  return {
+    slides,
+    showCaptions: body.showCaptions === true,
+    carouselCrop: readCarouselCrop(body.carouselCrop),
+  }
 }
 
 export function parseHomepageList(value: unknown): HomepageSlide[] | null {
@@ -34,10 +40,13 @@ export function parseHomepageList(value: unknown): HomepageSlide[] | null {
 
 export function parseHomepageInput(value: unknown, slugs: ReadonlySet<string>): HomepageDocument | { error: string } {
   if (!value || typeof value !== 'object' || !('slides' in value)) return { error: 'Send the homepage images.' }
-  const body = value as { slides: unknown; showCaptions?: unknown }
+  const body = value as { slides: unknown; showCaptions?: unknown; carouselCrop?: unknown }
   if (!Array.isArray(body.slides)) return { error: 'Send the homepage images.' }
   if (body.slides.length > MAX_SLIDES) return { error: `The homepage can have at most ${MAX_SLIDES} images.` }
   if (body.showCaptions != null && typeof body.showCaptions !== 'boolean') return { error: 'Choose whether to show captions.' }
+  if (body.carouselCrop != null && !isCarouselCrop(body.carouselCrop)) {
+    return { error: 'Choose none, portrait, or landscape for carousel crop.' }
+  }
   const slides: HomepageSlide[] = []
   for (const item of body.slides) {
     const slide = readSlide(item)
@@ -45,7 +54,11 @@ export function parseHomepageInput(value: unknown, slugs: ReadonlySet<string>): 
     if (!slugs.has(slide.slug)) return { error: 'Each homepage image needs to open a work.' }
     slides.push(slide)
   }
-  return { slides, showCaptions: body.showCaptions === true }
+  return {
+    slides,
+    showCaptions: body.showCaptions === true,
+    carouselCrop: readCarouselCrop(body.carouselCrop),
+  }
 }
 
 export function retargetSlides(slides: HomepageSlide[], from: string, to: string) {

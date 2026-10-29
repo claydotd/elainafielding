@@ -1,13 +1,30 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { Icon } from '../../components/Icon'
-import { ABOUT_BLOCK_LIMIT, type AboutAlign, type AboutBlock, type AboutImageSide, type AboutWidth } from '../../data/about'
+import {
+  ABOUT_BLOCK_LIMIT,
+  CAROUSEL_IMAGE_LIMIT,
+  type AboutAlign,
+  type AboutBlock,
+  type AboutCarouselSlide,
+  type AboutImageAlign,
+  type AboutImageSide,
+  type AboutImageSize,
+  type AboutWidth,
+} from '../../data/about'
+import { isCarouselCrop, type CarouselCrop } from '../../data/carousel'
+import { isImageCrop, type ImageCrop } from '../../data/image-crop'
 import { aboutTextClass } from '../../lib/about'
 import { uploadImageFile } from '../../lib/admin-api'
 import { plainText } from '../../lib/sanitize-html'
 import { moveItem } from '../../lib/reorder'
 import { HtmlEditor } from './HtmlEditor'
 
-export type ContentBlockDraft = AboutBlock & { id: string }
+type CarouselSlideDraft = AboutCarouselSlide & { id: string }
+
+export type ContentBlockDraft =
+  | (Extract<AboutBlock, { type: 'text' | 'split' }> & { id: string })
+  | (Extract<AboutBlock, { type: 'image' }> & { id: string; crop: ImageCrop })
+  | { id: string; type: 'carousel'; images: CarouselSlideDraft[]; crop: CarouselCrop }
 
 type ContentBlocksEditorProps = {
   blocks: ContentBlockDraft[]
@@ -15,6 +32,7 @@ type ContentBlocksEditorProps = {
   disabled?: boolean
   heading?: string
   headingId?: string
+  allowCarousel?: boolean
   onError?: (message: string) => void
 }
 
@@ -24,6 +42,7 @@ export function ContentBlocksEditor({
   disabled = false,
   heading,
   headingId = 'content-blocks',
+  allowCarousel = false,
   onError,
 }: ContentBlocksEditorProps) {
   const [closed, setClosed] = useState<Set<string>>(() => new Set())
@@ -31,6 +50,10 @@ export function ContentBlocksEditor({
   const [dropIndex, setDropIndex] = useState<number | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const fileTarget = useRef<string | null>(null)
+  const carouselAddInput = useRef<HTMLInputElement>(null)
+  const carouselReplaceInput = useRef<HTMLInputElement>(null)
+  const carouselTarget = useRef<string | null>(null)
+  const carouselReplaceAt = useRef<number | null>(null)
   const dragFrom = useRef<number | null>(null)
   const blocksRef = useRef(blocks)
   blocksRef.current = blocks
@@ -60,8 +83,67 @@ export function ContentBlocksEditor({
     try {
       const saved = await uploadImageFile(file, () => undefined)
       onChange(blocksRef.current.map((block) => {
-        if (block.id !== id || block.type === 'text') return block
+        if (block.id !== id || block.type === 'text' || block.type === 'carousel') return block
         return { ...block, image: saved.url }
+      }))
+    } catch (caught) {
+      onError?.(caught instanceof Error ? caught.message : 'Could not upload this image.')
+    } finally {
+      setUploadingId(null)
+    }
+  }
+
+  async function onCarouselAdd(event: ChangeEvent<HTMLInputElement>) {
+    const id = carouselTarget.current
+    const files = [...(event.target.files ?? [])]
+    event.target.value = ''
+    if (!id || files.length === 0) return
+    const block = blocksRef.current.find((item) => item.id === id)
+    if (!block || block.type !== 'carousel') return
+    const room = CAROUSEL_IMAGE_LIMIT - block.images.length
+    if (room <= 0) {
+      onError?.(`A carousel can have at most ${CAROUSEL_IMAGE_LIMIT} images.`)
+      return
+    }
+    setUploadingId(id)
+    onError?.('')
+    try {
+      for (const file of files.slice(0, room)) {
+        const saved = await uploadImageFile(file, () => undefined)
+        onChange(blocksRef.current.map((item) => {
+          if (item.id !== id || item.type !== 'carousel') return item
+          if (item.images.length >= CAROUSEL_IMAGE_LIMIT) return item
+          return {
+            ...item,
+            images: [...item.images, { id: crypto.randomUUID(), image: saved.url, caption: '' }],
+          }
+        }))
+      }
+    } catch (caught) {
+      onError?.(caught instanceof Error ? caught.message : 'Could not upload this image.')
+    } finally {
+      setUploadingId(null)
+    }
+  }
+
+  async function onCarouselReplace(event: ChangeEvent<HTMLInputElement>) {
+    const id = carouselTarget.current
+    const index = carouselReplaceAt.current
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    carouselReplaceAt.current = null
+    if (!id || index == null || !file) return
+    setUploadingId(id)
+    onError?.('')
+    try {
+      const saved = await uploadImageFile(file, () => undefined)
+      onChange(blocksRef.current.map((item) => {
+        if (item.id !== id || item.type !== 'carousel') return item
+        const images = item.images.slice()
+        const existing = images[index]
+        if (!existing) return item
+        images[index] = { ...existing, image: saved.url }
+        return { ...item, images }
       }))
     } catch (caught) {
       onError?.(caught instanceof Error ? caught.message : 'Could not upload this image.')
@@ -190,6 +272,23 @@ export function ContentBlocksEditor({
                         }}
                       />
                     ) : null}
+                    {block.type === 'carousel' ? (
+                      <CarouselSection
+                        block={block}
+                        uploading={uploadingId === block.id}
+                        disabled={busy}
+                        onChange={update}
+                        onAdd={() => {
+                          carouselTarget.current = block.id
+                          carouselAddInput.current?.click()
+                        }}
+                        onReplace={(slideIndex) => {
+                          carouselTarget.current = block.id
+                          carouselReplaceAt.current = slideIndex
+                          carouselReplaceInput.current?.click()
+                        }}
+                      />
+                    ) : null}
                   </div>
                 )}
               </li>
@@ -207,6 +306,11 @@ export function ContentBlocksEditor({
         <button className="admin-button admin-button--quiet" type="button" disabled={busy || atLimit} onClick={() => addBlock('split')}>
           Add text and image
         </button>
+        {allowCarousel ? (
+          <button className="admin-button admin-button--quiet" type="button" disabled={busy || atLimit} onClick={() => addBlock('carousel')}>
+            Add carousel
+          </button>
+        ) : null}
       </div>
       <input
         ref={fileInput}
@@ -216,12 +320,56 @@ export function ContentBlocksEditor({
         aria-label="Upload content image"
         onChange={(event) => void onUpload(event)}
       />
+      {allowCarousel ? (
+        <>
+          <input
+            ref={carouselAddInput}
+            className="sr-only"
+            type="file"
+            accept="image/*"
+            multiple
+            aria-label="Upload carousel images"
+            onChange={(event) => void onCarouselAdd(event)}
+          />
+          <input
+            ref={carouselReplaceInput}
+            className="sr-only"
+            type="file"
+            accept="image/*"
+            aria-label="Replace carousel image"
+            onChange={(event) => void onCarouselReplace(event)}
+          />
+        </>
+      ) : null}
     </section>
   )
 }
 
 export function draftsFromBlocks(blocks: AboutBlock[]): ContentBlockDraft[] {
-  return blocks.map((block) => ({ ...block, id: crypto.randomUUID() }))
+  return blocks.map((block) => {
+    if (block.type === 'image') {
+      return {
+        ...block,
+        id: crypto.randomUUID(),
+        size: block.size ?? 'full',
+        align: block.align ?? 'center',
+        crop: block.crop ?? 'original',
+      }
+    }
+    if (block.type === 'carousel') {
+      return {
+        id: crypto.randomUUID(),
+        type: 'carousel',
+        crop: block.crop ?? 'none',
+        images: block.images.map((slide) => ({
+          id: crypto.randomUUID(),
+          image: slide.image,
+          caption: slide.caption ?? '',
+        })),
+      }
+    }
+    return { ...block, id: crypto.randomUUID() }
+  })
 }
 
 export function storedBlocks(drafts: ContentBlockDraft[]): AboutBlock[] {
@@ -231,6 +379,13 @@ export function storedBlocks(drafts: ContentBlockDraft[]): AboutBlock[] {
 export function validateBlocks(blocks: ContentBlockDraft[]) {
   for (const block of blocks) {
     if (block.type === 'text') continue
+    if (block.type === 'carousel') {
+      if (block.images.length === 0) return 'Each carousel needs at least one image.'
+      for (const slide of block.images) {
+        if (!slide.image) return 'Each carousel image needs a file.'
+      }
+      continue
+    }
     if (!block.image) return 'Each image needs a file.'
     if (!block.alt.trim()) return 'Each image needs a description.'
   }
@@ -250,13 +405,14 @@ function TextSection({ block, disabled, onChange }: { block: Extract<ContentBloc
             aria-label={`Alignment for ${blockName(block)}`}
             onChange={(event) => {
               const align = event.target.value as AboutAlign
-              if (align !== 'left' && align !== 'center' && align !== 'right') return
+              if (align !== 'left' && align !== 'center' && align !== 'right' && align !== 'justify') return
               onChange({ ...block, align })
             }}
           >
             <option value="left">Left</option>
             <option value="center">Center</option>
             <option value="right">Right</option>
+            <option value="justify">Justify</option>
           </select>
         </label>
         <label className="admin-field">
@@ -368,17 +524,222 @@ function ImageSection({
   onPick: () => void
 }) {
   return (
-    <ImageFields
-      image={block.image}
-      alt={block.alt}
-      caption={block.caption}
-      uploading={uploading}
-      disabled={disabled}
-      onAlt={(alt) => onChange({ ...block, alt })}
-      onCaption={(caption) => onChange({ ...block, caption })}
-      onPick={onPick}
-      onClear={() => onChange({ ...block, image: '' })}
-    />
+    <>
+      <div className="admin-choices">
+        <label className="admin-field">
+          <span>Alignment</span>
+          <select
+            value={block.align ?? 'center'}
+            disabled={disabled}
+            aria-label={`Alignment for ${blockName(block)}`}
+            onChange={(event) => {
+              const align = event.target.value as AboutImageAlign
+              if (align !== 'left' && align !== 'center' && align !== 'right') return
+              onChange({ ...block, align })
+            }}
+          >
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </label>
+        <label className="admin-field">
+          <span>Size</span>
+          <select
+            value={block.size ?? 'full'}
+            disabled={disabled}
+            aria-label={`Size for ${blockName(block)}`}
+            onChange={(event) => {
+              const size = event.target.value as AboutImageSize
+              if (size !== 'small' && size !== 'medium' && size !== 'large' && size !== 'full') return
+              onChange({ ...block, size })
+            }}
+          >
+            <option value="small">Small</option>
+            <option value="medium">Medium</option>
+            <option value="large">Large</option>
+            <option value="full">Full</option>
+          </select>
+        </label>
+        <label className="admin-field">
+          <span>Crop</span>
+          <select
+            value={block.crop ?? 'original'}
+            disabled={disabled}
+            aria-label={`Crop for ${blockName(block)}`}
+            onChange={(event) => {
+              const crop = event.target.value
+              if (!isImageCrop(crop)) return
+              onChange({ ...block, crop })
+            }}
+          >
+            <option value="original">Original</option>
+            <option value="landscape">Landscape</option>
+            <option value="portrait">Portrait</option>
+            <option value="square">Square</option>
+          </select>
+        </label>
+      </div>
+      <ImageFields
+        image={block.image}
+        alt={block.alt}
+        caption={block.caption}
+        uploading={uploading}
+        disabled={disabled}
+        onAlt={(alt) => onChange({ ...block, alt })}
+        onCaption={(caption) => onChange({ ...block, caption })}
+        onPick={onPick}
+        onClear={() => onChange({ ...block, image: '' })}
+      />
+    </>
+  )
+}
+
+function CarouselSection({
+  block,
+  uploading,
+  disabled,
+  onChange,
+  onAdd,
+  onReplace,
+}: {
+  block: Extract<ContentBlockDraft, { type: 'carousel' }>
+  uploading: boolean
+  disabled: boolean
+  onChange: (block: ContentBlockDraft) => void
+  onAdd: () => void
+  onReplace: (index: number) => void
+}) {
+  const [dropIndex, setDropIndex] = useState<number | null>(null)
+  const dragFrom = useRef<number | null>(null)
+  const atLimit = block.images.length >= CAROUSEL_IMAGE_LIMIT
+
+  return (
+    <>
+      <label className="admin-field">
+        <span>Crop</span>
+        <select
+          value={block.crop}
+          disabled={disabled}
+          aria-label="Carousel image crop"
+          onChange={(event) => {
+            const crop = event.target.value
+            if (!isCarouselCrop(crop)) return
+            onChange({ ...block, crop })
+          }}
+        >
+          <option value="none">None</option>
+          <option value="portrait">Portrait</option>
+          <option value="landscape">Landscape</option>
+        </select>
+      </label>
+      {block.images.length === 0 ? <p>No carousel images yet.</p> : null}
+      {block.images.length > 0 ? (
+        <ol className="admin-list">
+          {block.images.map((image, index) => (
+            <li
+              key={image.id}
+              className={`admin-image${dropIndex === index ? ' is-drop-target' : ''}`}
+              onDragOver={(event) => {
+                event.preventDefault()
+                setDropIndex(index)
+              }}
+              onDrop={(event) => {
+                event.preventDefault()
+                const from = dragFrom.current
+                dragFrom.current = null
+                setDropIndex(null)
+                if (from == null) return
+                onChange({ ...block, images: moveItem(block.images, from, index) })
+              }}
+            >
+              <button
+                type="button"
+                className="admin-drag"
+                draggable={!disabled}
+                aria-label={`Drag carousel image ${index + 1}`}
+                onDragStart={() => {
+                  dragFrom.current = index
+                }}
+                onDragEnd={() => {
+                  dragFrom.current = null
+                  setDropIndex(null)
+                }}
+              >
+                <Icon name="grip" />
+              </button>
+              <img src={image.image} alt="" />
+              <div className="admin-slide-fields">
+                <span>Image {index + 1}</span>
+                <label className="admin-field">
+                  <span>Caption</span>
+                  <input
+                    value={image.caption}
+                    aria-label={`Caption for carousel image ${index + 1}`}
+                    maxLength={240}
+                    disabled={disabled}
+                    onChange={(event) => {
+                      const caption = event.target.value
+                      onChange({
+                        ...block,
+                        images: block.images.map((item) => (item.id === image.id ? { ...item, caption } : item)),
+                      })
+                    }}
+                  />
+                </label>
+              </div>
+              <div className="admin-inline">
+                <button
+                  type="button"
+                  className="admin-icon"
+                  aria-label={`Move image ${index + 1} up`}
+                  disabled={disabled || index === 0}
+                  onClick={() => onChange({ ...block, images: moveItem(block.images, index, index - 1) })}
+                >
+                  <Icon name="chevron-up" />
+                </button>
+                <button
+                  type="button"
+                  className="admin-icon"
+                  aria-label={`Move image ${index + 1} down`}
+                  disabled={disabled || index === block.images.length - 1}
+                  onClick={() => onChange({ ...block, images: moveItem(block.images, index, index + 1) })}
+                >
+                  <Icon name="chevron-down" />
+                </button>
+                <button
+                  type="button"
+                  className="admin-button admin-button--quiet"
+                  disabled={disabled}
+                  onClick={() => onReplace(index)}
+                >
+                  Replace
+                </button>
+                <button
+                  type="button"
+                  className="admin-button admin-button--quiet"
+                  disabled={disabled}
+                  onClick={() => onChange({
+                    ...block,
+                    images: block.images.filter((item) => item.id !== image.id),
+                  })}
+                >
+                  Remove
+                </button>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      <button
+        className="admin-button admin-button--quiet"
+        type="button"
+        disabled={disabled || atLimit}
+        onClick={onAdd}
+      >
+        {uploading ? 'Uploading…' : 'Add images'}
+      </button>
+    </>
   )
 }
 
@@ -443,14 +804,33 @@ function ImageFields({
 function createBlock(type: ContentBlockDraft['type']): ContentBlockDraft {
   const id = crypto.randomUUID()
   if (type === 'text') return { id, type, html: '', align: 'left', width: 'full' }
-  if (type === 'image') return { id, type, image: '', alt: '', caption: '' }
+  if (type === 'image') return { id, type, image: '', alt: '', caption: '', size: 'full', align: 'center', crop: 'original' }
+  if (type === 'carousel') return { id, type, images: [], crop: 'none' }
   return { id, type, html: '', image: '', alt: '', caption: '', imageSide: 'end' }
 }
 
 function storedBlock(draft: ContentBlockDraft): AboutBlock {
   if (draft.type === 'text') return { type: 'text', html: draft.html, align: draft.align, width: draft.width }
   if (draft.type === 'image') {
-    return { type: 'image', image: draft.image, alt: draft.alt.trim(), caption: draft.caption.trim() }
+    return {
+      type: 'image',
+      image: draft.image,
+      alt: draft.alt.trim(),
+      caption: draft.caption.trim(),
+      size: draft.size ?? 'full',
+      align: draft.align ?? 'center',
+      crop: draft.crop ?? 'original',
+    }
+  }
+  if (draft.type === 'carousel') {
+    return {
+      type: 'carousel',
+      crop: draft.crop,
+      images: draft.images.map((slide) => {
+        const caption = slide.caption.trim()
+        return caption ? { image: slide.image, caption } : { image: slide.image, caption: '' }
+      }),
+    }
   }
   return {
     type: 'split',
@@ -465,11 +845,17 @@ function storedBlock(draft: ContentBlockDraft): AboutBlock {
 function blockName(block: ContentBlockDraft) {
   if (block.type === 'text') return 'Text'
   if (block.type === 'image') return 'Image'
+  if (block.type === 'carousel') return 'Carousel'
   return 'Text and image'
 }
 
 function blockSummary(block: ContentBlockDraft) {
   if (block.type === 'image') return block.caption.trim() || block.alt.trim() || 'Image'
+  if (block.type === 'carousel') {
+    const count = block.images.length
+    if (count === 0) return 'Carousel'
+    return `Carousel · ${count} image${count === 1 ? '' : 's'}`
+  }
   const text = plainText(block.html)
   if (block.type === 'text') return text || 'Text'
   return text || block.caption.trim() || 'Text and image'

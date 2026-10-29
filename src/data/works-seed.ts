@@ -1,4 +1,5 @@
 import type { AboutBlock } from './about'
+import type { CarouselCrop } from './carousel'
 
 export type WorkPiece = {
   title: string
@@ -13,6 +14,20 @@ export type WorkImage = {
   caption?: string
 }
 
+export type WorkTemplate = 'standard' | 'scroll-story' | 'masthead'
+export type MastheadText = 'dark' | 'med' | 'light'
+
+export type ScrollStoryStep = {
+  image: string
+  alt: string
+  paragraphs: string[]
+}
+
+export type ScrollClosingImage = {
+  src: string
+  alt: string
+}
+
 export type WorkItem = {
   slug: string
   image: string
@@ -22,9 +37,16 @@ export type WorkItem = {
   year: string
   location?: string
   description?: string
+  template?: WorkTemplate
+  mastheadText?: MastheadText
+  scrollSteps?: ScrollStoryStep[]
+  scrollClosingImage?: ScrollClosingImage | null
+  /** @deprecated Prefer a `carousel` content block. Kept for seed/API migration. */
   images?: WorkImage[]
-  /** When false, hide the work-page carousel even if images exist. Defaults to true. */
+  /** @deprecated Prefer a `carousel` content block. Kept for seed/API migration. */
   showCarousel?: boolean
+  /** @deprecated Prefer a `carousel` content block. Kept for seed/API migration. */
+  carouselCrop?: CarouselCrop
   blocks?: AboutBlock[]
   pieces?: WorkPiece[]
 }
@@ -306,6 +328,7 @@ const seedWorks: SeedWork[] = [
     "dimensions": "Approx. 41 x 15 cm",
     "materials": "Elastic bands, masking tape, cardboard, newspaper",
     "year": "2023",
+    "template": "scroll-story",
     "pieces": [
       {
         "title": "A Sexy One",
@@ -314,13 +337,47 @@ const seedWorks: SeedWork[] = [
         "dimensions": "Approx. 41 x 15 cm"
       }
     ],
-    "images": [
-      "/images/works/42f71881-df96-4ae9-a7cb-cd8683de113b.jpg",
-      "/images/works/780d8fd5-e6e6-41db-b389-b079853997de.jpg",
-      "/images/works/f72afa14-6406-4f25-ba41-0a3de24a7075.jpg",
-      "/images/works/392305a5-6789-449f-9c31-b97a2e55a200.jpg",
-      "/images/works/eb064a6a-6375-40c6-8be8-1f231e0e74fc.jpg",
-      "/images/works/5fcc234c-26cb-4d7b-b9ae-3270dfd0923c.jpg"
+    "scrollSteps": [
+      {
+        "image": "/images/works/9b7b0d5e-c443-4d1d-ab27-ad5186576794.jpg",
+        "alt": "A Sexy One, view 1",
+        "paragraphs": ["Scroll to rotate the object."]
+      },
+      {
+        "image": "/images/works/42f71881-df96-4ae9-a7cb-cd8683de113b.jpg",
+        "alt": "A Sexy One, view 2",
+        "paragraphs": []
+      },
+      {
+        "image": "/images/works/780d8fd5-e6e6-41db-b389-b079853997de.jpg",
+        "alt": "A Sexy One, view 3",
+        "paragraphs": []
+      },
+      {
+        "image": "/images/works/f72afa14-6406-4f25-ba41-0a3de24a7075.jpg",
+        "alt": "A Sexy One, view 4",
+        "paragraphs": []
+      },
+      {
+        "image": "/images/works/392305a5-6789-449f-9c31-b97a2e55a200.jpg",
+        "alt": "A Sexy One, view 5",
+        "paragraphs": []
+      },
+      {
+        "image": "/images/works/eb064a6a-6375-40c6-8be8-1f231e0e74fc.jpg",
+        "alt": "A Sexy One, view 6",
+        "paragraphs": []
+      }
+    ],
+    "blocks": [
+      {
+        "type": "image",
+        "image": "/images/works/5fcc234c-26cb-4d7b-b9ae-3270dfd0923c.jpg",
+        "alt": "A Sexy One, view 7",
+        "caption": "",
+        "size": "full",
+        "align": "center"
+      }
     ]
   },
   {

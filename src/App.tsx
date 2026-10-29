@@ -7,6 +7,7 @@ import { AdminLogin } from './pages/admin/AdminLogin'
 import { AdminWorks } from './pages/admin/AdminWorks'
 import { WorkEditor } from './pages/admin/WorkEditor'
 import { Home } from './pages/Home'
+import { NotFound } from './pages/NotFound'
 import { Work } from './pages/Work'
 import { WorkDetail } from './pages/WorkDetail'
 import { Shop } from './pages/Shop'
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="admin/about" element={<AdminAbout />} />
         <Route path="admin/works/new" element={<WorkEditor />} />
         <Route path="admin/works/:slug" element={<WorkEditor />} />
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   )

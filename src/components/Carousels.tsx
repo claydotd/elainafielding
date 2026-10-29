@@ -1,6 +1,16 @@
-import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction, type TransitionEvent } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+  type TransitionEvent,
+} from 'react'
 import { Link } from 'react-router-dom'
 import { useWorks } from '../context/useWorks'
+import { carouselCropClass, type CarouselCrop } from '../data/carousel'
 import { carouselSizes, fittedImage } from '../lib/fitted-image'
 import { FadeImage } from './FadeImage'
 import { Icon } from './Icon'
@@ -116,8 +126,15 @@ function useSeamlessTrack(
 
   useEffect(() => {
     if (!instant || !placedRef.current) return
-    const id = requestAnimationFrame(() => setInstant(false))
-    return () => cancelAnimationFrame(id)
+    // Two frames so the snapped transform paints with transition:none before motion resumes.
+    let inner = 0
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setInstant(false))
+    })
+    return () => {
+      cancelAnimationFrame(outer)
+      cancelAnimationFrame(inner)
+    }
   }, [instant, offsetPx])
 
   useEffect(() => {
@@ -189,20 +206,28 @@ export type HomepageImage = {
 type HomepageCarouselProps = {
   images: HomepageImage[]
   showCaptions: boolean
+  carouselCrop?: CarouselCrop
   currentIndex: number
   setCurrentIndex: Dispatch<SetStateAction<number>>
 }
 
-export function HomepageCarousel({ images, showCaptions, currentIndex, setCurrentIndex }: HomepageCarouselProps) {
+export function HomepageCarousel({
+  images,
+  showCaptions,
+  carouselCrop = 'none',
+  currentIndex,
+  setCurrentIndex,
+}: HomepageCarouselProps) {
   const { works } = useWorks()
   const count = images.length
   const loop = count > 1
   const track = useSeamlessTrack(count, loop, currentIndex, setCurrentIndex, 0)
   const slides = repeatSlides(images, loop ? LOOP_COPIES : 1)
   const caption = images[track.logical]?.caption?.trim() ?? ''
+  const cropClass = carouselCropClass('homepage-carousel', carouselCrop)
 
   return (
-    <div className={`homepage-carousel${showCaptions ? ' homepage-carousel--captions' : ''}`}>
+    <div className={`homepage-carousel${showCaptions ? ' homepage-carousel--captions' : ''}${cropClass ? ` ${cropClass}` : ''}`}>
       <button
         type="button"
         className="carousel-prev"
@@ -220,20 +245,22 @@ export function HomepageCarousel({ images, showCaptions, currentIndex, setCurren
         >
           {slides.map((image, index) => {
             const label = works.find((work) => work.slug === image.slug)?.name ?? `Work ${mod(index, count) + 1}`
+            // Keep every clone mounted. Unmounting on wrap remounts FadeImage at opacity 0 and flashes.
             const hidden = index < track.position - 1 || index > track.position + 1
             const current = index === track.position
             return (
               <div className="carousel-item" key={`${image.src}-${image.slug}-${index}`} aria-hidden={hidden}>
                 <Link to={`/work/${image.slug}`} className="carousel-link" tabIndex={hidden ? -1 : undefined}>
-                  {hidden ? null : (
+                  <CarouselCropFrame crop={carouselCrop}>
                     <FadeImage
                       {...fittedImage(image.src, 'hero')}
                       alt={label}
                       decoding="async"
                       loading="eager"
                       fetchPriority={current ? 'high' : 'low'}
+                      style={carouselCrop === 'none' ? undefined : { aspectRatio: 'unset' }}
                     />
-                  )}
+                  </CarouselCropFrame>
                 </Link>
               </div>
             )
@@ -275,11 +302,17 @@ export type WorkCarouselImage = {
 
 type WorkCarouselProps = {
   images: WorkCarouselImage[]
+  carouselCrop?: CarouselCrop
   currentIndex: number
   setCurrentIndex: Dispatch<SetStateAction<number>>
 }
 
-export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCarouselProps) {
+export function WorkCarousel({
+  images,
+  carouselCrop = 'none',
+  currentIndex,
+  setCurrentIndex,
+}: WorkCarouselProps) {
   const count = images.length
   const [pageWidth, setPageWidth] = useState(() =>
     typeof window === 'undefined' ? MOBILE_BREAKPOINT_PX + WIDTH_PER_EXTRA_IMAGE_PX : window.innerWidth,
@@ -298,9 +331,10 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
   const track = useSeamlessTrack(count, canScroll, currentIndex, setCurrentIndex, visibleCount, AUTOPLAY_WORK_PAGE)
   const slides = repeatSlides(images, canScroll ? LOOP_COPIES : 1)
   const showCaptions = images.some((image) => Boolean(image.caption?.trim()))
+  const cropClass = carouselCropClass('work-carousel', carouselCrop)
 
   return (
-    <div className={`work-carousel${showCaptions ? ' work-carousel--captions' : ''}`}>
+    <div className={`work-carousel${showCaptions ? ' work-carousel--captions' : ''}${cropClass ? ` ${cropClass}` : ''}`}>
       {canScroll && (
         <button
           type="button"
@@ -319,6 +353,7 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
           onTransitionEnd={track.onTransitionEnd}
         >
           {slides.map((image, index) => {
+            // Keep every clone mounted. Unmounting on wrap remounts FadeImage at opacity 0 and flashes.
             const hidden = index < track.position - 1 || index > track.position + visibleCount
             const caption = image.caption?.trim() ?? ''
             return (
@@ -328,17 +363,16 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
                 style={{ flex: `0 0 ${slotPercent}%`, maxWidth: `${slotPercent}%` }}
                 aria-hidden={hidden}
               >
-                {hidden ? null : (
-                  <>
-                    <FadeImage
-                      {...fittedImage(image.image, 'carousel', carouselSizes(visibleCount))}
-                      alt={caption || `Work ${mod(index, count) + 1}`}
-                      decoding="async"
-                      loading="eager"
-                    />
-                    {showCaptions ? <p className="work-carousel__caption">{caption}</p> : null}
-                  </>
-                )}
+                <CarouselCropFrame crop={carouselCrop}>
+                  <FadeImage
+                    {...fittedImage(image.image, 'carousel', carouselSizes(visibleCount))}
+                    alt={caption || `Work ${mod(index, count) + 1}`}
+                    decoding="async"
+                    loading="eager"
+                    style={carouselCrop === 'none' ? undefined : { aspectRatio: 'unset' }}
+                  />
+                </CarouselCropFrame>
+                {showCaptions ? <p className="work-carousel__caption">{caption}</p> : null}
               </div>
             )
           })}
@@ -371,4 +405,9 @@ export function WorkCarousel({ images, currentIndex, setCurrentIndex }: WorkCaro
       )}
     </div>
   )
+}
+
+function CarouselCropFrame({ crop, children }: { crop: CarouselCrop; children: ReactNode }) {
+  if (crop === 'none') return children
+  return <div className="carousel-crop">{children}</div>
 }

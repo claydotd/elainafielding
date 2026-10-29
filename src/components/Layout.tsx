@@ -20,6 +20,23 @@ export function Layout() {
     return () => cancelAnimationFrame(frame)
   }, [pathname, hash])
 
+  useEffect(() => {
+    const header = document.querySelector('.site-header')
+    if (!(header instanceof HTMLElement)) return
+
+    const sync = () => {
+      document.documentElement.style.setProperty('--header-offset', `${header.offsetHeight}px`)
+    }
+
+    sync()
+    const observer = new ResizeObserver(sync)
+    observer.observe(header)
+    return () => {
+      observer.disconnect()
+      document.documentElement.style.removeProperty('--header-offset')
+    }
+  }, [])
+
   return (
     <div className="site">
       <Nav />

@@ -40,7 +40,7 @@ export function About() {
       <div className="page-container page-container--about">
         {blocks ? (
           <>
-            <article className="page">
+            <article className="about-page">
               <AboutContent blocks={blocks} />
             </article>
             <ContactForm />

@@ -1,5 +1,6 @@
 import type { AboutBlock } from '../data/about'
 import type { HomepageDocument } from '../data/homepage'
+import { rememberImageSize } from '../data/image-sizes'
 import type { WorkItem } from '../data/works-seed'
 import { compressImage } from './compress-image'
 
@@ -106,14 +107,31 @@ export async function uploadImageFile(file: File, onProgress: (progress: UploadP
     originalBytes: prepared.originalBytes,
     compressedBytes: prepared.compressedBytes,
   })
-  const saved = await send<{ url: string }>('/api/admin/uploads', {
+  const saved = await send<{ url: string; width: number; height: number }>('/api/admin/uploads', {
     method: 'POST',
-    headers: { 'content-type': prepared.contentType },
+    headers: {
+      'content-type': prepared.contentType,
+      'x-image-width': String(prepared.width),
+      'x-image-height': String(prepared.height),
+    },
     body: prepared.blob,
   })
+  rememberImageSize(saved.url, saved.width, saved.height)
   return {
     url: saved.url,
+    width: saved.width,
+    height: saved.height,
     originalBytes: prepared.originalBytes,
     compressedBytes: prepared.compressedBytes,
   }
+}
+
+export function backfillImageSizes() {
+  return send<{
+    total: number
+    updated: number
+    skipped: number
+    failed: number
+    sizes: Record<string, [number, number]>
+  }>('/api/admin/image-sizes/backfill', { method: 'POST' })
 }
