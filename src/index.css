@@ -214,6 +214,7 @@ button {
   margin-top: 0;
   height: 75vh;
   max-height: 75vh;
+  gap: var(--space-1);
 }
 
 .work-carousel {
@@ -1031,11 +1032,6 @@ a.work-gallery__item:hover .work-gallery__name {
   font-size: var(--text-lg);
 }
 
-.work-details__description--after-hero {
-  margin-top: var(--space-8);
-  padding-top: 0;
-}
-
 /* Masthead description uses text-block align/width + placement. */
 .work-details__description.bio-text {
   max-width: none;
@@ -1165,13 +1161,20 @@ a.work-gallery__item:hover .work-gallery__name {
   max-width: 100%;
 }
 
-/* Masthead: sticky lead, meta scrolls away, then blocks. */
+/* Masthead: sticky lead, meta scrolls away, solo beat, then sticky copy under lead. */
 .work-masthead {
   --masthead-offset: var(--header-offset);
   --masthead-frame: calc(100svh - var(--masthead-offset) - var(--space-6));
+  /* Room for meta to clear + a beat of lead-alone before copy locks under it. */
+  --masthead-solo: max(10rem, 28vh);
+  /* Extra pin height so lead + copy hold together briefly after locking. */
+  --masthead-linger: max(4rem, 12vh);
+  --masthead-lead-height: 0px;
   --masthead-text: var(--color-bg);
   width: 100%;
   min-width: 0;
+  /* Cancel linger padding so blocks aren't separated by an empty band at rest. */
+  margin-bottom: calc(var(--masthead-linger) * -1);
 }
 
 .work-masthead--dark {
@@ -1186,32 +1189,31 @@ a.work-gallery__item:hover .work-gallery__name {
   --masthead-text: var(--color-bg);
 }
 
-/* Column width tracks the image so meta cannot bleed past it. */
-.work-masthead__column {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  width: fit-content;
-  max-width: 100%;
-  margin-inline: auto;
-  min-width: 0;
-}
-
-.work-masthead--fit-full .work-masthead__column {
+/* Containing block for both stickies (lead + description). */
+.work-masthead__pin-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  min-width: 0;
+  padding-bottom: var(--masthead-linger);
 }
 
 .work-masthead__media {
-  grid-column: 1;
-  grid-row: 1;
   position: sticky;
   top: var(--masthead-offset);
   z-index: 0;
-  align-self: start;
+  align-self: center;
   display: flex;
   justify-content: center;
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
   min-width: 0;
+}
+
+.work-masthead--fit-full .work-masthead__media {
+  width: 100%;
+  align-self: stretch;
 }
 
 .work-masthead__media img {
@@ -1228,19 +1230,15 @@ a.work-gallery__item:hover .work-gallery__name {
   max-height: none;
 }
 
+/* Absolute over the lead so it scrolls away while the image stays put.
+   Horizontal placement comes from measured image offset on the meta node. */
 .work-masthead__overlay {
-  grid-column: 1;
-  grid-row: 1;
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 1;
-  align-self: start;
-  display: flex;
-  flex-direction: column;
-  /* Follow column (image) width without expanding it via long meta text. */
-  width: 0;
-  min-width: 100%;
   padding-top: var(--space-6);
-  padding-inline: var(--space-4);
   pointer-events: none;
   box-sizing: border-box;
 }
@@ -1248,7 +1246,10 @@ a.work-gallery__item:hover .work-gallery__name {
 .work-masthead__meta {
   pointer-events: auto;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
+  padding-inline: var(--space-4);
+  box-sizing: border-box;
   overflow-wrap: anywhere;
 }
 
@@ -1264,15 +1265,29 @@ a.work-gallery__item:hover .work-gallery__name {
   color: var(--masthead-text);
 }
 
-/* Keeps the lead sticky after meta clears so it can be viewed alone before blocks. */
+/* Holds the sticky lead alone after meta clears; copy starts below this. */
 .work-masthead__runway {
-  grid-column: 1;
-  grid-row: 2;
-  height: var(--masthead-frame);
+  flex: 0 0 auto;
+  height: var(--masthead-solo);
   pointer-events: none;
 }
 
+/* Locks under the lead once it reaches it; off-screen at the start via the runway. */
+.work-masthead__description {
+  position: sticky;
+  top: calc(var(--masthead-offset) + var(--masthead-lead-height));
+  z-index: 0;
+  margin-top: 0;
+  padding-top: var(--space-4);
+  background: var(--color-bg);
+}
+
 @media (max-width: 640px) {
+  .work-masthead--fit-frame .work-masthead__media {
+    width: 100%;
+    align-self: stretch;
+  }
+
   .work-masthead--fit-frame .work-masthead__media img {
     width: 100%;
     height: auto;
@@ -1292,12 +1307,11 @@ a.work-gallery__item:hover .work-gallery__name {
   }
 
   .work-masthead__overlay {
-    padding-inline: var(--space-4);
     padding-top: var(--space-4);
   }
 
-  .work-masthead--fit-frame .work-masthead__runway {
-    height: min(var(--masthead-frame), 70vh);
+  .work-masthead__description {
+    padding-top: var(--space-3);
   }
 }
 

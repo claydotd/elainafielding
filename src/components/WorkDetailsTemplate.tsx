@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { useWorks } from '../context/useWorks'
 import type { AboutAlign, AboutBlock, AboutImageAlign, AboutWidth } from '../data/about'
@@ -103,6 +104,10 @@ export function WorkDetailsTemplate({
           title={title}
           pieces={pieces}
           location={location}
+          description={description}
+          descriptionAlign={descriptionAlign}
+          descriptionWidth={descriptionWidth}
+          descriptionPlacement={descriptionPlacement}
           image={image}
           imageSize={imageSize}
           imageAlign={imageAlign}
@@ -143,16 +148,6 @@ export function WorkDetailsTemplate({
         </article>
       )}
 
-      {template === 'masthead' ? (
-        <WorkDescription
-          description={description}
-          align={descriptionAlign}
-          width={descriptionWidth}
-          placement={descriptionPlacement}
-          className="work-details__description--after-hero"
-        />
-      ) : null}
-
       {blocks.length > 0 ? (
         <div className="work-details__blocks">
           <AboutContent blocks={blocks} />
@@ -168,6 +163,10 @@ function MastheadHero({
   title,
   pieces,
   location,
+  description,
+  descriptionAlign = 'justify',
+  descriptionWidth = 'medium',
+  descriptionPlacement = 'left',
   image,
   imageSize = 'default',
   imageAlign = 'left',
@@ -177,6 +176,10 @@ function MastheadHero({
   title: string
   pieces: WorkPiece[]
   location?: string
+  description: string
+  descriptionAlign?: AboutAlign
+  descriptionWidth?: AboutWidth
+  descriptionPlacement?: AboutImageAlign
   image: string
   imageSize?: WorkImageSize
   imageAlign?: AboutImageAlign
@@ -184,12 +187,65 @@ function MastheadHero({
   fit: MastheadFit
 }) {
   const mediaClass = leadImageClass(imageSize, imageAlign)
+  const pinRef = useRef<HTMLDivElement>(null)
+  const mediaRef = useRef<HTMLDivElement>(null)
+  const [leadHeight, setLeadHeight] = useState(0)
+  const [leadWidth, setLeadWidth] = useState(0)
+  const [leadLeft, setLeadLeft] = useState(0)
+
+  useLayoutEffect(() => {
+    const media = mediaRef.current
+    const pin = pinRef.current
+    if (!media || !pin) {
+      setLeadHeight(0)
+      setLeadWidth(0)
+      setLeadLeft(0)
+      return
+    }
+
+    const sync = () => {
+      const img = media.querySelector('img')
+      const mediaRect = media.getBoundingClientRect()
+      const pinRect = pin.getBoundingClientRect()
+      const artRect = (img ?? media).getBoundingClientRect()
+      // Height for description sticky top; width/left so meta tracks the art.
+      setLeadHeight(mediaRect.height)
+      setLeadWidth(artRect.width)
+      setLeadLeft(artRect.left - pinRect.left)
+    }
+
+    sync()
+    const ro = new ResizeObserver(sync)
+    ro.observe(media)
+    ro.observe(pin)
+    const img = media.querySelector('img')
+    if (img) ro.observe(img)
+    window.addEventListener('resize', sync)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', sync)
+    }
+  }, [image, imageSize, imageAlign, fit])
+
+  const mastheadStyle = {
+    '--masthead-lead-height': `${leadHeight}px`,
+  } as CSSProperties
 
   return (
-    <section className={`work-masthead work-masthead--${text} work-masthead--fit-${fit}`}>
-      <div className="work-masthead__column">
+    <section
+      className={`work-masthead work-masthead--${text} work-masthead--fit-${fit}`}
+      style={mastheadStyle}
+    >
+      {/*
+        Two stickies, one pin: lead alone through the runway, then description
+        locks under the lead until the pin releases.
+      */}
+      <div className="work-masthead__pin-area" ref={pinRef}>
         {image ? (
-          <div className={['work-masthead__media', mediaClass].filter(Boolean).join(' ')}>
+          <div
+            ref={mediaRef}
+            className={['work-masthead__media', mediaClass].filter(Boolean).join(' ')}
+          >
             <FadeImage
               {...fittedImage(image, 'hero', '100vw')}
               alt={title}
@@ -199,13 +255,30 @@ function MastheadHero({
             />
           </div>
         ) : null}
+
         <div className="work-masthead__overlay">
-          <div className="work-masthead__meta">
+          <div
+            className="work-masthead__meta"
+            style={
+              leadWidth > 0
+                ? { width: leadWidth, maxWidth: '100%', marginLeft: leadLeft }
+                : undefined
+            }
+          >
             <WorkMeta heading="h1" pieces={pieces} location={location} />
           </div>
         </div>
-        {/* Scroll room while the lead stays sticky and unobstructed, then blocks begin. */}
+
+        {/* Solo beat: meta clears, lead holds alone, description still below. */}
         <div className="work-masthead__runway" aria-hidden="true" />
+
+        <WorkDescription
+          description={description}
+          align={descriptionAlign}
+          width={descriptionWidth}
+          placement={descriptionPlacement}
+          className="work-masthead__description"
+        />
       </div>
     </section>
   )
