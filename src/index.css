@@ -212,8 +212,11 @@ button {
 
 .homepage-carousel {
   margin-top: 0;
-  height: 75vh;
-  max-height: 75vh;
+  /* Fill remaining shell height (.site--home). Avoids 75vh overflowing iOS address-bar chrome. */
+  flex: 1 1 auto;
+  height: auto;
+  max-height: none;
+  min-height: 0;
   gap: var(--space-1);
 }
 

@@ -37,8 +37,10 @@ export function Layout() {
     }
   }, [])
 
+  const isHome = pathname === '/'
+
   return (
-    <div className="site">
+    <div className={`site${isHome ? ' site--home' : ''}`}>
       <Nav />
       <main className="site-main">
         <Outlet />

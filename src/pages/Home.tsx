@@ -31,7 +31,7 @@ export function Home() {
         path="/"
         description="Elaina Fielding | Artist"
       />
-      <article className="page">
+      <article className="page page--home">
         {images == null ? <div className="homepage-carousel" aria-hidden="true" /> : null}
         {images && images.length > 0 ? (
           <HomepageCarousel

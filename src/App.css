@@ -6,6 +6,26 @@
   min-height: 100svh;
 }
 
+/* Homepage: lock to the visible viewport so the carousel cannot outgrow iOS Safari chrome. */
+.site--home {
+  height: 100svh;
+  max-height: 100svh;
+  overflow: hidden;
+}
+
+.site--home .site-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.site--home .page--home {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .site-header {
   position: sticky;
   top: 0;
@@ -222,6 +242,10 @@
 .page {
   min-height: 40vh;
   animation: page-fade-in var(--duration-slow) var(--ease) both;
+}
+
+.page--home {
+  min-height: 0;
 }
 
 .about-page {
