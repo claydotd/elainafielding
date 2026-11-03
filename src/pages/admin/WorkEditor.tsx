@@ -4,6 +4,7 @@ import { Seo } from '../../components/Seo'
 import { Icon } from '../../components/Icon'
 import { useWorks } from '../../context/useWorks'
 import type { AboutAlign, AboutImageAlign, AboutWidth } from '../../data/about'
+import { isImageCrop, type ImageCrop } from '../../data/image-crop'
 import type { MastheadFit, MastheadText, WorkImageSize, WorkItem, WorkTemplate } from '../../data/works-seed'
 import {
   DESCRIPTION_ALIGN_OPTIONS,
@@ -13,6 +14,8 @@ import {
   IMAGE_SIZE_OPTIONS,
   MASTHEAD_FIT_OPTIONS,
   MASTHEAD_TEXT_OPTIONS,
+  SCROLL_CROP_OPTIONS,
+  scrollCrop,
   workContentBlocks,
   workImageAlign,
   workImageSize,
@@ -64,6 +67,7 @@ type Draft = {
   template: WorkTemplate
   mastheadText: MastheadText
   mastheadFit: MastheadFit
+  scrollCrop: ImageCrop
   scrollSteps: ScrollStepDraft[]
   blocks: ContentBlockDraft[]
   pieces: PieceDraft[]
@@ -359,6 +363,25 @@ function Editor() {
                   </select>
                 </label>
               </>
+            ) : null}
+            {draft.template === 'scroll-story' ? (
+              <label className="admin-field">
+                <span>Image crop</span>
+                <select
+                  value={draft.scrollCrop}
+                  onChange={(event) => {
+                    const next = event.target.value
+                    if (!isImageCrop(next)) return
+                    updateDraft({ scrollCrop: next })
+                  }}
+                >
+                  {SCROLL_CROP_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option === 'original' ? 'No cropping' : option.charAt(0).toUpperCase() + option.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </label>
             ) : null}
             <label className="admin-field">
               <span>Slug</span>
@@ -892,6 +915,7 @@ function emptyDraft(): Draft {
     template: 'standard',
     mastheadText: 'light',
     mastheadFit: 'frame',
+    scrollCrop: 'original',
     scrollSteps: [emptyScrollStep()],
     blocks: [],
     pieces: [emptyPiece()],
@@ -928,6 +952,7 @@ function toDraft(work: WorkItem): Draft {
     template: work.template ?? 'standard',
     mastheadText: work.mastheadText ?? 'light',
     mastheadFit: work.mastheadFit ?? 'frame',
+    scrollCrop: scrollCrop(work),
     scrollSteps: work.scrollSteps?.length
       ? work.scrollSteps.map((step) => ({
           id: crypto.randomUUID(),
@@ -1001,6 +1026,7 @@ function toWork(draft: Draft): WorkItem {
         paragraphs: textToParagraphs(step.paragraphs),
       }))
     if (scrollSteps.length > 0) work.scrollSteps = scrollSteps
+    if (draft.scrollCrop !== 'original') work.scrollCrop = draft.scrollCrop
     work.scrollClosingImage = null
   }
   if (blocks.length > 0) work.blocks = blocks

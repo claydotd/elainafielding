@@ -1,5 +1,6 @@
 import { createContext } from 'react'
 import type { AboutAlign, AboutBlock, AboutImageAlign, AboutWidth } from '../data/about'
+import { isImageCrop } from '../data/image-crop'
 import type {
   MastheadFit,
   MastheadText,
@@ -47,6 +48,7 @@ export function isWorkItem(value: unknown): value is WorkItem {
     && (work.template == null || WORK_TEMPLATES.has(work.template))
     && (work.mastheadText == null || MASTHEAD_TEXT.has(work.mastheadText))
     && (work.mastheadFit == null || MASTHEAD_FIT.has(work.mastheadFit))
+    && (work.scrollCrop == null || isImageCrop(work.scrollCrop))
     && (work.scrollSteps == null || (Array.isArray(work.scrollSteps) && work.scrollSteps.every(isScrollStoryStep)))
     && (work.scrollClosingImage == null || isScrollClosingImage(work.scrollClosingImage))
     && (work.showCarousel == null || typeof work.showCarousel === 'boolean')

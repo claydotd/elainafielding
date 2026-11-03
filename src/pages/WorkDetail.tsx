@@ -9,6 +9,7 @@ import {
   descriptionWidth,
   mastheadFit,
   mastheadText,
+  scrollCrop,
   workContentBlocks,
   workImageAlign,
   workImageSize,
@@ -89,6 +90,7 @@ export function WorkDetail() {
           mastheadText={mastheadText(work)}
           mastheadFit={mastheadFit(work)}
           scrollSteps={work.scrollSteps}
+          scrollCrop={scrollCrop(work)}
         />
       </div>
     </>

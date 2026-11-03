@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { readImageCrop, scrollCropClass, type ImageCrop } from '../data/image-crop'
 import type { ScrollStoryStep, WorkPiece } from '../data/works-seed'
 import { fittedImage } from '../lib/fitted-image'
 import { FadeImage } from './FadeImage'
@@ -11,6 +12,7 @@ type ScrollStoryHeroProps = {
   location?: string
   description?: string
   steps: ScrollStoryStep[]
+  crop?: ImageCrop
   fallbackTitle: string
 }
 
@@ -19,9 +21,12 @@ export function ScrollStoryHero({
   location,
   description = '',
   steps,
+  crop = 'original',
   fallbackTitle,
 }: ScrollStoryHeroProps) {
   const frames = steps
+  const resolvedCrop = readImageCrop(crop)
+  const cropped = resolvedCrop !== 'original'
   const [activeIndex, setActiveIndex] = useState(0)
   const chaptersRef = useRef<(HTMLElement | null)[]>([])
 
@@ -65,20 +70,32 @@ export function ScrollStoryHero({
       </div>
 
       <div className="scroll-story__stage">
-        <div className="scroll-story__frame">
-          {frames.map((step, index) => (
-            <FadeImage
-              key={`${step.image}-${index}`}
-              {...fittedImage(step.image, 'hero', '(max-width: 640px) 66vw, 50vw')}
-              alt={step.alt || fallbackTitle}
-              className={index === activeIndex ? 'is-active' : undefined}
-              aria-hidden={index === activeIndex ? undefined : true}
-              decoding="async"
-              loading={index === activeIndex ? 'eager' : 'lazy'}
-              fetchPriority={index === 0 ? 'high' : undefined}
-              style={{ aspectRatio: 'unset' }}
-            />
-          ))}
+        <div className={['scroll-story__frame', scrollCropClass(resolvedCrop)].filter(Boolean).join(' ')}>
+          {frames.map((step, index) => {
+            const imageProps = {
+              ...fittedImage(step.image, 'hero', '(max-width: 640px) 66vw, 50vw'),
+              alt: step.alt || fallbackTitle,
+              className: index === activeIndex ? 'is-active' : undefined,
+              'aria-hidden': index === activeIndex ? undefined : true,
+              decoding: 'async' as const,
+              loading: (index === activeIndex ? 'eager' : 'lazy') as 'eager' | 'lazy',
+              fetchPriority: index === 0 ? 'high' as const : undefined,
+              style: { aspectRatio: 'unset' },
+            }
+
+            if (!cropped) {
+              return <FadeImage key={`${step.image}-${index}`} {...imageProps} />
+            }
+
+            return (
+              <div
+                key={`${step.image}-${index}`}
+                className={['scroll-story__crop', index === activeIndex ? 'is-active' : ''].filter(Boolean).join(' ')}
+              >
+                <FadeImage {...imageProps} />
+              </div>
+            )
+          })}
         </div>
       </div>
 

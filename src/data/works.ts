@@ -1,4 +1,5 @@
 import type { AboutAlign, AboutBlock, AboutCarouselBlock, AboutImageAlign, AboutWidth } from './about'
+import { readImageCrop, type ImageCrop } from './image-crop'
 import {
   worksSeed,
   type MastheadFit,
@@ -24,6 +25,8 @@ export type {
   WorkTemplate,
 }
 
+export type { ImageCrop }
+
 export const WORK_TEMPLATES: WorkTemplate[] = ['standard', 'scroll-story', 'masthead', 'column']
 export const MASTHEAD_TEXT_OPTIONS: MastheadText[] = ['dark', 'med', 'light']
 export const MASTHEAD_FIT_OPTIONS: MastheadFit[] = ['full', 'frame']
@@ -32,6 +35,7 @@ export const DESCRIPTION_WIDTH_OPTIONS: AboutWidth[] = ['full', 'medium', 'small
 export const DESCRIPTION_PLACEMENT_OPTIONS: AboutImageAlign[] = ['left', 'center', 'right']
 export const IMAGE_SIZE_OPTIONS: WorkImageSize[] = ['default', 'large', 'medium', 'small']
 export const IMAGE_ALIGN_OPTIONS: AboutImageAlign[] = ['left', 'center', 'right']
+export const SCROLL_CROP_OPTIONS: ImageCrop[] = ['original', 'portrait', 'landscape', 'square']
 
 export function workTemplate(work: Pick<WorkItem, 'template'>): WorkTemplate {
   return work.template ?? 'standard'
@@ -43,6 +47,10 @@ export function mastheadText(work: Pick<WorkItem, 'mastheadText'>): MastheadText
 
 export function mastheadFit(work: Pick<WorkItem, 'mastheadFit'>): MastheadFit {
   return work.mastheadFit ?? 'frame'
+}
+
+export function scrollCrop(work: Pick<WorkItem, 'scrollCrop'>): ImageCrop {
+  return readImageCrop(work.scrollCrop)
 }
 
 export function workImageSize(work: Pick<WorkItem, 'imageSize'>): WorkImageSize {

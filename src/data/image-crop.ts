@@ -14,3 +14,10 @@ export function imageCropClass(crop: ImageCrop = 'original') {
   if (crop === 'square') return 'about-content__image--crop-square'
   return ''
 }
+
+export function scrollCropClass(crop: ImageCrop = 'original') {
+  if (crop === 'portrait') return 'scroll-story__frame--crop-portrait'
+  if (crop === 'landscape') return 'scroll-story__frame--crop-landscape'
+  if (crop === 'square') return 'scroll-story__frame--crop-square'
+  return ''
+}

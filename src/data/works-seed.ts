@@ -1,5 +1,6 @@
 import type { AboutAlign, AboutBlock, AboutImageAlign, AboutWidth } from './about'
 import type { CarouselCrop } from './carousel'
+import type { ImageCrop } from './image-crop'
 
 /** Lead image width relative to the media column. Default keeps intrinsic sizing. */
 export type WorkImageSize = 'default' | 'large' | 'medium' | 'small'
@@ -53,6 +54,8 @@ export type WorkItem = {
   template?: WorkTemplate
   mastheadText?: MastheadText
   mastheadFit?: MastheadFit
+  /** Scroll-story sticky frames: original or cropped to a fixed ratio. */
+  scrollCrop?: ImageCrop
   scrollSteps?: ScrollStoryStep[]
   scrollClosingImage?: ScrollClosingImage | null
   /** @deprecated Prefer a `carousel` content block. Kept for seed/API migration. */

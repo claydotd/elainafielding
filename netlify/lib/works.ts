@@ -1,4 +1,5 @@
 import type { AboutAlign, AboutBlock, AboutImageAlign, AboutWidth } from '../../src/data/about.ts'
+import { isImageCrop, readImageCrop, type ImageCrop } from '../../src/data/image-crop.ts'
 import type {
   MastheadFit,
   MastheadText,
@@ -166,6 +167,10 @@ function parseWork(value: unknown, options: { requireSlugShape: boolean }): Work
   if (fit === false) return null
   if (fit) work.mastheadFit = fit
 
+  const scrollCrop = parseScrollCrop(body.scrollCrop)
+  if (scrollCrop === false) return null
+  if (scrollCrop) work.scrollCrop = scrollCrop
+
   const descriptionAlign = parseDescriptionAlign(body.descriptionAlign)
   if (descriptionAlign === false) return null
   if (descriptionAlign) work.descriptionAlign = descriptionAlign
@@ -221,6 +226,12 @@ function parseMastheadFit(value: unknown): MastheadFit | null | false {
   if (value == null || value === '') return null
   if (typeof value !== 'string' || !MASTHEAD_FIT.has(value as MastheadFit)) return false
   return value as MastheadFit
+}
+
+function parseScrollCrop(value: unknown): ImageCrop | null | false {
+  if (value == null || value === '' || value === 'original') return null
+  if (!isImageCrop(value)) return false
+  return readImageCrop(value)
 }
 
 function parseDescriptionAlign(value: unknown): AboutAlign | null | false {

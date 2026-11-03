@@ -3,6 +3,7 @@ import { useWorks } from '../context/useWorks'
 import type { AboutAlign, AboutBlock, AboutImageAlign, AboutWidth } from '../data/about'
 import {
   leadImageClass,
+  type ImageCrop,
   type MastheadFit,
   type MastheadText,
   type ScrollStoryStep,
@@ -36,6 +37,7 @@ type WorkDetailsTemplateProps = {
   mastheadText?: MastheadText
   mastheadFit?: MastheadFit
   scrollSteps?: ScrollStoryStep[]
+  scrollCrop?: ImageCrop
 }
 
 export function BackToWork({ slug }: { slug: string }) {
@@ -80,6 +82,7 @@ export function WorkDetailsTemplate({
   mastheadText = 'light',
   mastheadFit = 'frame',
   scrollSteps = [],
+  scrollCrop = 'original',
 }: WorkDetailsTemplateProps) {
   const mediaClass = leadImageClass(imageSize, imageAlign)
 
@@ -92,6 +95,7 @@ export function WorkDetailsTemplate({
           location={location}
           description={description}
           steps={scrollSteps}
+          crop={scrollCrop}
           fallbackTitle={title}
         />
       ) : template === 'masthead' ? (
