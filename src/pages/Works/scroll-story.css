@@ -34,10 +34,21 @@
   padding-block: var(--space-8);
 }
 
+/* Hold the final sticky frame a beat longer before it unsticks. */
+.scroll-story__chapter:last-child {
+  min-height: 110vh;
+  padding-bottom: var(--space-12);
+}
+
 /* Image-only beats — just enough height to advance the sticky frame. */
 .scroll-story__chapter:empty {
   min-height: 40vh;
   padding-block: var(--space-2);
+}
+
+.scroll-story__chapter:empty:last-child {
+  min-height: 70vh;
+  padding-bottom: var(--space-8);
 }
 
 .scroll-story__chapter p {
@@ -134,8 +145,18 @@
     padding-block: var(--space-4);
   }
 
+  .scroll-story__chapter:last-child {
+    min-height: 90vh;
+    padding-bottom: var(--space-8);
+  }
+
   .scroll-story__chapter:empty {
     min-height: 35vh;
     padding-block: var(--space-1);
+  }
+
+  .scroll-story__chapter:empty:last-child {
+    min-height: 55vh;
+    padding-bottom: var(--space-6);
   }
 }
