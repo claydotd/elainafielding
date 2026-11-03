@@ -1,13 +1,16 @@
-import type { AboutBlock } from '../../src/data/about.ts'
+import type { AboutAlign, AboutBlock, AboutImageAlign, AboutWidth } from '../../src/data/about.ts'
 import type {
+  MastheadFit,
   MastheadText,
   ScrollClosingImage,
   ScrollStoryStep,
   WorkImage,
+  WorkImageSize,
   WorkItem,
   WorkPiece,
   WorkTemplate,
 } from '../../src/data/works-seed.ts'
+import { storedRichText } from '../../src/lib/sanitize-html.ts'
 import { aboutImageUrls, parseWorkBlockList, parseWorkBlocksInput } from './about.ts'
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -32,8 +35,13 @@ const LIMITS = {
   paragraphs: 20,
 }
 
-const WORK_TEMPLATES = new Set<WorkTemplate>(['standard', 'scroll-story', 'masthead'])
+const WORK_TEMPLATES = new Set<WorkTemplate>(['standard', 'scroll-story', 'masthead', 'column'])
 const MASTHEAD_TEXT = new Set<MastheadText>(['dark', 'med', 'light'])
+const MASTHEAD_FIT = new Set<MastheadFit>(['full', 'frame'])
+const DESCRIPTION_ALIGNS = new Set<AboutAlign>(['left', 'center', 'right', 'justify'])
+const DESCRIPTION_WIDTHS = new Set<AboutWidth>(['full', 'medium', 'small'])
+const DESCRIPTION_PLACEMENTS = new Set<AboutImageAlign>(['left', 'center', 'right'])
+const IMAGE_SIZES = new Set<WorkImageSize>(['default', 'large', 'medium', 'small'])
 
 export function insertionIndex(works: WorkItem[], year: string) {
   const nextYear = yearNumber(year)
@@ -93,7 +101,7 @@ function parseWork(value: unknown, options: { requireSlugShape: boolean }): Work
   const location = clip(body.location, LIMITS.location)
   const dimensions = clip(body.dimensions, LIMITS.dimensions)
   const materials = clip(body.materials, LIMITS.materials)
-  const description = clip(body.description, LIMITS.description)
+  const description = readDescription(body.description)
   const image = clip(body.image, 240)
   if (name == null || slug == null || year == null || location == null || dimensions == null || materials == null || description == null || image == null) {
     return null
@@ -138,6 +146,14 @@ function parseWork(value: unknown, options: { requireSlugShape: boolean }): Work
   }
   if (blocks.length > 0) work.blocks = blocks
 
+  const imageSize = parseImageSize(body.imageSize)
+  if (imageSize === false) return null
+  if (imageSize) work.imageSize = imageSize
+
+  const imageAlign = parseImageAlign(body.imageAlign)
+  if (imageAlign === false) return null
+  if (imageAlign) work.imageAlign = imageAlign
+
   const template = parseTemplate(body.template)
   if (template === false) return null
   if (template) work.template = template
@@ -145,6 +161,22 @@ function parseWork(value: unknown, options: { requireSlugShape: boolean }): Work
   const masthead = parseMastheadText(body.mastheadText)
   if (masthead === false) return null
   if (masthead) work.mastheadText = masthead
+
+  const fit = parseMastheadFit(body.mastheadFit)
+  if (fit === false) return null
+  if (fit) work.mastheadFit = fit
+
+  const descriptionAlign = parseDescriptionAlign(body.descriptionAlign)
+  if (descriptionAlign === false) return null
+  if (descriptionAlign) work.descriptionAlign = descriptionAlign
+
+  const descriptionWidth = parseDescriptionWidth(body.descriptionWidth)
+  if (descriptionWidth === false) return null
+  if (descriptionWidth) work.descriptionWidth = descriptionWidth
+
+  const descriptionPlacement = parseDescriptionPlacement(body.descriptionPlacement)
+  if (descriptionPlacement === false) return null
+  if (descriptionPlacement) work.descriptionPlacement = descriptionPlacement
 
   const scrollSteps = parseScrollSteps(body.scrollSteps, options)
   if (!scrollSteps) return null
@@ -159,6 +191,20 @@ function parseWork(value: unknown, options: { requireSlugShape: boolean }): Work
   return work
 }
 
+function parseImageSize(value: unknown): WorkImageSize | null | false {
+  if (value == null || value === '') return null
+  // Legacy "full" and explicit default omit the field (intrinsic sizing).
+  if (value === 'full' || value === 'default') return null
+  if (typeof value !== 'string' || !IMAGE_SIZES.has(value as WorkImageSize)) return false
+  return value as WorkImageSize
+}
+
+function parseImageAlign(value: unknown): AboutImageAlign | null | false {
+  if (value == null || value === '' || value === 'left') return null
+  if (typeof value !== 'string' || !DESCRIPTION_PLACEMENTS.has(value as AboutImageAlign)) return false
+  return value as AboutImageAlign
+}
+
 function parseTemplate(value: unknown): WorkTemplate | null | false {
   if (value == null || value === '') return null
   if (typeof value !== 'string' || !WORK_TEMPLATES.has(value as WorkTemplate)) return false
@@ -169,6 +215,30 @@ function parseMastheadText(value: unknown): MastheadText | null | false {
   if (value == null || value === '') return null
   if (typeof value !== 'string' || !MASTHEAD_TEXT.has(value as MastheadText)) return false
   return value as MastheadText
+}
+
+function parseMastheadFit(value: unknown): MastheadFit | null | false {
+  if (value == null || value === '') return null
+  if (typeof value !== 'string' || !MASTHEAD_FIT.has(value as MastheadFit)) return false
+  return value as MastheadFit
+}
+
+function parseDescriptionAlign(value: unknown): AboutAlign | null | false {
+  if (value == null || value === '') return null
+  if (typeof value !== 'string' || !DESCRIPTION_ALIGNS.has(value as AboutAlign)) return false
+  return value as AboutAlign
+}
+
+function parseDescriptionWidth(value: unknown): AboutWidth | null | false {
+  if (value == null || value === '') return null
+  if (typeof value !== 'string' || !DESCRIPTION_WIDTHS.has(value as AboutWidth)) return false
+  return value as AboutWidth
+}
+
+function parseDescriptionPlacement(value: unknown): AboutImageAlign | null | false {
+  if (value == null || value === '') return null
+  if (typeof value !== 'string' || !DESCRIPTION_PLACEMENTS.has(value as AboutImageAlign)) return false
+  return value as AboutImageAlign
 }
 
 function parseScrollSteps(
@@ -276,6 +346,15 @@ function clip(value: unknown, max: number) {
   const trimmed = value.trim()
   if (trimmed.length > max) return null
   return trimmed
+}
+
+function readDescription(value: unknown) {
+  if (value == null) return ''
+  if (typeof value !== 'string') return null
+  if (value.length > 100_000) return null
+  const html = storedRichText(value)
+  if (html.length > LIMITS.description) return null
+  return html
 }
 
 export function isAllowedImage(url: string) {

@@ -11,7 +11,6 @@ import { imageSize } from 'image-size'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const blobsRoot = join(root, '.netlify/blobs-serve')
-const localSiteId = 'unlinked'
 const remote = process.argv.includes('--remote')
 const concurrency = 6
 
@@ -53,6 +52,11 @@ function resolveSiteId() {
   } catch {
     return ''
   }
+}
+
+/** Folder netlify dev actually reads: linked site id, or "unlinked". */
+function resolveLocalSiteId() {
+  return resolveSiteId() || 'unlinked'
 }
 
 function probe(bytes) {
@@ -153,7 +157,7 @@ async function backfillRemote() {
   console.log(`Remote backfill: ${updated} updated, ${skipped} skipped, ${failed} failed (${keys.length} images).`)
 }
 
-function storePaths(storeName) {
+function storePaths(storeName, localSiteId) {
   const encoded = `site:${storeName}`
   return {
     entries: join(blobsRoot, 'entries', localSiteId, encoded),
@@ -162,8 +166,9 @@ function storePaths(storeName) {
 }
 
 function backfillLocal() {
-  const imagePaths = storePaths('work-images')
-  const worksPaths = storePaths('works')
+  const localSiteId = resolveLocalSiteId()
+  const imagePaths = storePaths('work-images', localSiteId)
+  const worksPaths = storePaths('works', localSiteId)
   if (!existsSync(imagePaths.entries)) {
     console.error('Local work-images were not found. Run npm run pull-blobs first.')
     process.exit(1)

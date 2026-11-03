@@ -368,6 +368,9 @@ export function draftsFromBlocks(blocks: AboutBlock[]): ContentBlockDraft[] {
         })),
       }
     }
+    if (block.type === 'text') {
+      return { ...block, id: crypto.randomUUID(), placement: block.placement ?? 'left' }
+    }
     return { ...block, id: crypto.randomUUID() }
   })
 }
@@ -394,9 +397,27 @@ export function validateBlocks(blocks: ContentBlockDraft[]) {
 
 function TextSection({ block, disabled, onChange }: { block: Extract<ContentBlockDraft, { type: 'text' }>; disabled: boolean; onChange: (block: ContentBlockDraft) => void }) {
   const labelId = `content-text-${block.id}`
+  const placement = block.placement ?? 'left'
   return (
     <>
       <div className="admin-choices">
+        <label className="admin-field">
+          <span>Placement</span>
+          <select
+            value={placement}
+            disabled={disabled}
+            aria-label={`Placement for ${blockName(block)}`}
+            onChange={(event) => {
+              const next = event.target.value as AboutImageAlign
+              if (next !== 'left' && next !== 'center' && next !== 'right') return
+              onChange({ ...block, placement: next })
+            }}
+          >
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </label>
         <label className="admin-field">
           <span>Alignment</span>
           <select
@@ -438,7 +459,7 @@ function TextSection({ block, disabled, onChange }: { block: Extract<ContentBloc
         <HtmlEditor
           value={block.html}
           labelledBy={labelId}
-          previewClassName={aboutTextClass(block.align, block.width)}
+          previewClassName={aboutTextClass(block.align, block.width, placement)}
           disabled={disabled}
           onChange={(html) => onChange({ ...block, html })}
         />
@@ -803,14 +824,22 @@ function ImageFields({
 
 function createBlock(type: ContentBlockDraft['type']): ContentBlockDraft {
   const id = crypto.randomUUID()
-  if (type === 'text') return { id, type, html: '', align: 'left', width: 'full' }
+  if (type === 'text') return { id, type, html: '', align: 'left', width: 'full', placement: 'left' }
   if (type === 'image') return { id, type, image: '', alt: '', caption: '', size: 'full', align: 'center', crop: 'original' }
   if (type === 'carousel') return { id, type, images: [], crop: 'none' }
   return { id, type, html: '', image: '', alt: '', caption: '', imageSide: 'end' }
 }
 
 function storedBlock(draft: ContentBlockDraft): AboutBlock {
-  if (draft.type === 'text') return { type: 'text', html: draft.html, align: draft.align, width: draft.width }
+  if (draft.type === 'text') {
+    return {
+      type: 'text',
+      html: draft.html,
+      align: draft.align,
+      width: draft.width,
+      placement: draft.placement ?? 'left',
+    }
+  }
   if (draft.type === 'image') {
     return {
       type: 'image',

@@ -8,8 +8,6 @@ import { getStore } from '@netlify/blobs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const blobsRoot = join(root, '.netlify/blobs-serve')
-// Matches netlify dev when the folder is not linked, and scripts/pull-blobs.mjs.
-const localSiteId = 'unlinked'
 const stores = ['works', 'work-images']
 const concurrency = 8
 
@@ -54,6 +52,11 @@ function resolveSiteId() {
   }
 }
 
+/** Folder netlify dev actually reads: linked site id, or "unlinked". */
+function resolveLocalSiteId() {
+  return resolveSiteId() || 'unlinked'
+}
+
 async function listKeys(store) {
   const keys = []
   for await (const page of store.list({ paginate: true })) {
@@ -75,7 +78,7 @@ async function mapPool(items, limit, worker) {
   return results
 }
 
-function storePaths(storeName) {
+function storePaths(storeName, localSiteId) {
   const encoded = `site:${storeName}`
   return {
     entries: join(blobsRoot, 'entries', localSiteId, encoded),
@@ -109,6 +112,7 @@ function readMetadata(metaPath) {
 
 const token = resolveToken()
 const siteID = resolveSiteId()
+const localSiteId = resolveLocalSiteId()
 if (!token) {
   console.error('No Netlify auth token found. Run `netlify login` or set NETLIFY_AUTH_TOKEN.')
   process.exit(1)
@@ -121,7 +125,7 @@ if (!siteID) {
 let totalSet = 0
 let totalDeleted = 0
 for (const storeName of stores) {
-  const paths = storePaths(storeName)
+  const paths = storePaths(storeName, localSiteId)
   const localKeys = listLocalKeys(paths.entries)
   if (localKeys.length === 0) {
     console.error(`No local blobs found for ${storeName} at ${paths.entries}.`)

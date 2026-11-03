@@ -140,9 +140,11 @@ function readText(body: Record<string, unknown>): AboutPageBlock | { error: stri
   if ('error' in html) return html
   const align = readChoice(body.align, ALIGNS)
   const width = readChoice(body.width, WIDTHS)
+  const placement = body.placement == null ? 'left' : readChoice(body.placement, IMAGE_ALIGNS)
   if (!align) return { error: 'Choose left, center, right, or justify for each text section.' }
   if (!width) return { error: 'Choose a width for each text section.' }
-  return { type: 'text', html: html.html, align, width }
+  if (!placement) return { error: 'Choose left, center, or right placement for each text section.' }
+  return { type: 'text', html: html.html, align, width, placement }
 }
 
 function readImage(body: Record<string, unknown>): AboutPageBlock | { error: string } {

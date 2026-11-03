@@ -1,6 +1,7 @@
 import { createContext } from 'react'
-import type { AboutBlock } from '../data/about'
+import type { AboutAlign, AboutBlock, AboutImageAlign, AboutWidth } from '../data/about'
 import type {
+  MastheadFit,
   MastheadText,
   ScrollClosingImage,
   ScrollStoryStep,
@@ -19,8 +20,13 @@ export type WorksContextValue = {
 
 export const WorksContext = createContext<WorksContextValue | null>(null)
 
-const WORK_TEMPLATES = new Set<WorkTemplate>(['standard', 'scroll-story', 'masthead'])
+const WORK_TEMPLATES = new Set<WorkTemplate>(['standard', 'scroll-story', 'masthead', 'column'])
 const MASTHEAD_TEXT = new Set<MastheadText>(['dark', 'med', 'light'])
+const MASTHEAD_FIT = new Set<MastheadFit>(['full', 'frame'])
+const DESCRIPTION_ALIGNS = new Set<AboutAlign>(['left', 'center', 'right', 'justify'])
+const DESCRIPTION_WIDTHS = new Set<AboutWidth>(['full', 'medium', 'small'])
+const DESCRIPTION_PLACEMENTS = new Set<AboutImageAlign>(['left', 'center', 'right'])
+const IMAGE_SIZES = new Set<string>(['default', 'large', 'medium', 'small', 'full'])
 
 export function isWorkItem(value: unknown): value is WorkItem {
   if (!value || typeof value !== 'object') return false
@@ -28,13 +34,19 @@ export function isWorkItem(value: unknown): value is WorkItem {
   return typeof work.slug === 'string'
     && typeof work.name === 'string'
     && typeof work.image === 'string'
+    && (work.imageSize == null || IMAGE_SIZES.has(work.imageSize))
+    && (work.imageAlign == null || DESCRIPTION_PLACEMENTS.has(work.imageAlign))
     && typeof work.dimensions === 'string'
     && typeof work.materials === 'string'
     && typeof work.year === 'string'
     && (work.location == null || typeof work.location === 'string')
     && (work.description == null || typeof work.description === 'string')
+    && (work.descriptionAlign == null || DESCRIPTION_ALIGNS.has(work.descriptionAlign))
+    && (work.descriptionWidth == null || DESCRIPTION_WIDTHS.has(work.descriptionWidth))
+    && (work.descriptionPlacement == null || DESCRIPTION_PLACEMENTS.has(work.descriptionPlacement))
     && (work.template == null || WORK_TEMPLATES.has(work.template))
     && (work.mastheadText == null || MASTHEAD_TEXT.has(work.mastheadText))
+    && (work.mastheadFit == null || MASTHEAD_FIT.has(work.mastheadFit))
     && (work.scrollSteps == null || (Array.isArray(work.scrollSteps) && work.scrollSteps.every(isScrollStoryStep)))
     && (work.scrollClosingImage == null || isScrollClosingImage(work.scrollClosingImage))
     && (work.showCarousel == null || typeof work.showCarousel === 'boolean')
@@ -76,6 +88,7 @@ function isAboutBlock(value: unknown): value is AboutBlock {
     return typeof block.html === 'string'
       && (block.align === 'left' || block.align === 'center' || block.align === 'right' || block.align === 'justify')
       && (block.width === 'full' || block.width === 'medium' || block.width === 'small')
+      && (block.placement == null || block.placement === 'left' || block.placement === 'center' || block.placement === 'right')
   }
   if (block.type === 'image') {
     return typeof block.image === 'string'

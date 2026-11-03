@@ -1,5 +1,8 @@
-import type { AboutBlock } from './about'
+import type { AboutAlign, AboutBlock, AboutImageAlign, AboutWidth } from './about'
 import type { CarouselCrop } from './carousel'
+
+/** Lead image width relative to the media column. Default keeps intrinsic sizing. */
+export type WorkImageSize = 'default' | 'large' | 'medium' | 'small'
 
 export type WorkPiece = {
   title: string
@@ -14,8 +17,9 @@ export type WorkImage = {
   caption?: string
 }
 
-export type WorkTemplate = 'standard' | 'scroll-story' | 'masthead'
+export type WorkTemplate = 'standard' | 'scroll-story' | 'masthead' | 'column'
 export type MastheadText = 'dark' | 'med' | 'light'
+export type MastheadFit = 'full' | 'frame'
 
 export type ScrollStoryStep = {
   image: string
@@ -31,14 +35,24 @@ export type ScrollClosingImage = {
 export type WorkItem = {
   slug: string
   image: string
+  /** Lead image width relative to the media column. Defaults to default. */
+  imageSize?: WorkImageSize
+  /** Lead image alignment within the media column (desktop). Defaults to left. */
+  imageAlign?: AboutImageAlign
   name: string
   dimensions: string
   materials: string
   year: string
   location?: string
   description?: string
+  /** Masthead / Column description layout. Ignored on other templates. */
+  descriptionAlign?: AboutAlign
+  /** Masthead: description max-width. Column: shared max-width for lead image + details. */
+  descriptionWidth?: AboutWidth
+  descriptionPlacement?: AboutImageAlign
   template?: WorkTemplate
   mastheadText?: MastheadText
+  mastheadFit?: MastheadFit
   scrollSteps?: ScrollStoryStep[]
   scrollClosingImage?: ScrollClosingImage | null
   /** @deprecated Prefer a `carousel` content block. Kept for seed/API migration. */

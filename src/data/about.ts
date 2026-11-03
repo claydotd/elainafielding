@@ -15,6 +15,8 @@ export type AboutTextBlock = {
   html: string
   align: AboutAlign
   width: AboutWidth
+  /** Horizontal placement of the block. Defaults to left. */
+  placement?: AboutImageAlign
 }
 
 export type AboutImageBlock = {

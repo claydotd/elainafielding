@@ -3,11 +3,26 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Seo } from '../../components/Seo'
 import { Icon } from '../../components/Icon'
 import { useWorks } from '../../context/useWorks'
-import type { MastheadText, WorkItem, WorkTemplate } from '../../data/works-seed'
-import { MASTHEAD_TEXT_OPTIONS, workContentBlocks, workPieces } from '../../data/works'
+import type { AboutAlign, AboutImageAlign, AboutWidth } from '../../data/about'
+import type { MastheadFit, MastheadText, WorkImageSize, WorkItem, WorkTemplate } from '../../data/works-seed'
+import {
+  DESCRIPTION_ALIGN_OPTIONS,
+  DESCRIPTION_PLACEMENT_OPTIONS,
+  DESCRIPTION_WIDTH_OPTIONS,
+  IMAGE_ALIGN_OPTIONS,
+  IMAGE_SIZE_OPTIONS,
+  MASTHEAD_FIT_OPTIONS,
+  MASTHEAD_TEXT_OPTIONS,
+  workContentBlocks,
+  workImageAlign,
+  workImageSize,
+  workPieces,
+} from '../../data/works'
+import { aboutTextClass } from '../../lib/about'
 import { ApiError, createWork, deleteWork, updateWork, uploadImageFile, type UploadProgress } from '../../lib/admin-api'
 import { formatBytes } from '../../lib/format-bytes'
 import { moveItem } from '../../lib/reorder'
+import { sanitizeHtml, storedRichText } from '../../lib/sanitize-html'
 import { isSlug, slugify, slugInput } from '../../lib/slug'
 import { AdminGate } from './AdminGate'
 import {
@@ -17,6 +32,7 @@ import {
   validateBlocks,
   type ContentBlockDraft,
 } from './ContentBlocksEditor'
+import { HtmlEditor } from './HtmlEditor'
 
 type PieceDraft = {
   id: string
@@ -39,9 +55,15 @@ type Draft = {
   slug: string
   location: string
   description: string
+  descriptionAlign: AboutAlign
+  descriptionWidth: AboutWidth
+  descriptionPlacement: AboutImageAlign
   image: string
+  imageSize: WorkImageSize
+  imageAlign: AboutImageAlign
   template: WorkTemplate
   mastheadText: MastheadText
+  mastheadFit: MastheadFit
   scrollSteps: ScrollStepDraft[]
   blocks: ContentBlockDraft[]
   pieces: PieceDraft[]
@@ -305,22 +327,38 @@ function Editor() {
                 <option value="standard">Standard</option>
                 <option value="scroll-story">Scroll-story</option>
                 <option value="masthead">Masthead</option>
+                <option value="column">Column</option>
               </select>
             </label>
             {draft.template === 'masthead' ? (
-              <label className="admin-field">
-                <span>Text colour</span>
-                <select
-                  value={draft.mastheadText}
-                  onChange={(event) => updateDraft({ mastheadText: event.target.value as MastheadText })}
-                >
-                  {MASTHEAD_TEXT_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option === 'med' ? 'Med' : option.charAt(0).toUpperCase() + option.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <>
+                <label className="admin-field">
+                  <span>Text colour</span>
+                  <select
+                    value={draft.mastheadText}
+                    onChange={(event) => updateDraft({ mastheadText: event.target.value as MastheadText })}
+                  >
+                    {MASTHEAD_TEXT_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option === 'med' ? 'Med' : option.charAt(0).toUpperCase() + option.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="admin-field">
+                  <span>Image fit</span>
+                  <select
+                    value={draft.mastheadFit}
+                    onChange={(event) => updateDraft({ mastheadFit: event.target.value as MastheadFit })}
+                  >
+                    {MASTHEAD_FIT_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option === 'full' ? 'Full size' : 'Constrain height'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
             ) : null}
             <label className="admin-field">
               <span>Slug</span>
@@ -495,10 +533,76 @@ function Editor() {
               <span>Location</span>
               <input value={draft.location} onChange={(event) => updateDraft({ location: event.target.value })} />
             </label>
-            <label className="admin-field">
-              <span>Description</span>
-              <textarea rows={8} value={draft.description} onChange={(event) => updateDraft({ description: event.target.value })} />
-            </label>
+            <div className="admin-field">
+              <span id="work-description">Description</span>
+              {draft.template === 'masthead' || draft.template === 'column' ? (
+                <div className="admin-choices">
+                  <label className="admin-field">
+                    <span>Placement</span>
+                    <select
+                      value={draft.descriptionPlacement}
+                      aria-label={draft.template === 'column' ? 'Column placement' : 'Description placement'}
+                      onChange={(event) => {
+                        const placement = event.target.value as AboutImageAlign
+                        if (!DESCRIPTION_PLACEMENT_OPTIONS.includes(placement)) return
+                        updateDraft({ descriptionPlacement: placement })
+                      }}
+                    >
+                      <option value="left">Left</option>
+                      <option value="center">Center</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </label>
+                  <label className="admin-field">
+                    <span>Alignment</span>
+                    <select
+                      value={draft.descriptionAlign}
+                      aria-label="Description alignment"
+                      onChange={(event) => {
+                        const align = event.target.value as AboutAlign
+                        if (!DESCRIPTION_ALIGN_OPTIONS.includes(align)) return
+                        updateDraft({ descriptionAlign: align })
+                      }}
+                    >
+                      <option value="left">Left</option>
+                      <option value="center">Center</option>
+                      <option value="right">Right</option>
+                      <option value="justify">Justify</option>
+                    </select>
+                  </label>
+                  <label className="admin-field">
+                    <span>{draft.template === 'column' ? 'Column width' : 'Width'}</span>
+                    <select
+                      value={draft.descriptionWidth}
+                      aria-label={draft.template === 'column' ? 'Column width' : 'Description width'}
+                      onChange={(event) => {
+                        const width = event.target.value as AboutWidth
+                        if (!DESCRIPTION_WIDTH_OPTIONS.includes(width)) return
+                        updateDraft({ descriptionWidth: width })
+                      }}
+                    >
+                      <option value="full">Full</option>
+                      <option value="medium">Medium</option>
+                      <option value="small">Narrow</option>
+                    </select>
+                  </label>
+                </div>
+              ) : null}
+              <HtmlEditor
+                value={draft.description}
+                labelledBy="work-description"
+                previewClassName={
+                  draft.template === 'masthead' || draft.template === 'column'
+                    ? aboutTextClass(
+                      draft.descriptionAlign,
+                      draft.template === 'column' ? 'full' : draft.descriptionWidth,
+                      draft.template === 'column' ? 'left' : draft.descriptionPlacement,
+                    )
+                    : undefined
+                }
+                onChange={(html) => updateDraft({ description: html })}
+              />
+            </div>
 
             <section className="admin-section" aria-labelledby="lead-image">
               <h2 id="lead-image">Lead image</h2>
@@ -513,6 +617,46 @@ function Editor() {
                   </button>
                 ) : null}
               </div>
+              {draft.template !== 'scroll-story' && draft.template !== 'column' ? (
+                <>
+                  <label className="admin-field">
+                    <span>Size</span>
+                    <select
+                      value={draft.imageSize}
+                      aria-label="Lead image size"
+                      onChange={(event) => {
+                        const size = event.target.value as WorkImageSize
+                        if (!IMAGE_SIZE_OPTIONS.includes(size)) return
+                        updateDraft({ imageSize: size })
+                      }}
+                    >
+                      {IMAGE_SIZE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option.charAt(0).toUpperCase() + option.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="admin-field">
+                    <span>Alignment (desktop)</span>
+                    <select
+                      value={draft.imageAlign}
+                      aria-label="Lead image alignment"
+                      onChange={(event) => {
+                        const align = event.target.value as AboutImageAlign
+                        if (!IMAGE_ALIGN_OPTIONS.includes(align)) return
+                        updateDraft({ imageAlign: align })
+                      }}
+                    >
+                      {IMAGE_ALIGN_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option.charAt(0).toUpperCase() + option.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              ) : null}
               <input
                 ref={leadInput}
                 className="sr-only"
@@ -739,9 +883,15 @@ function emptyDraft(): Draft {
     slug: '',
     location: '',
     description: '',
+    descriptionAlign: 'justify',
+    descriptionWidth: 'medium',
+    descriptionPlacement: 'left',
     image: '',
+    imageSize: 'default',
+    imageAlign: 'left',
     template: 'standard',
     mastheadText: 'light',
+    mastheadFit: 'frame',
     scrollSteps: [emptyScrollStep()],
     blocks: [],
     pieces: [emptyPiece()],
@@ -768,10 +918,16 @@ function toDraft(work: WorkItem): Draft {
     name: work.name,
     slug: work.slug,
     location: work.location ?? '',
-    description: work.description ?? '',
+    description: storedRichText(work.description ?? ''),
+    descriptionAlign: work.descriptionAlign ?? 'justify',
+    descriptionWidth: work.descriptionWidth ?? 'medium',
+    descriptionPlacement: work.descriptionPlacement ?? 'left',
     image: work.image,
+    imageSize: workImageSize(work),
+    imageAlign: workImageAlign(work),
     template: work.template ?? 'standard',
     mastheadText: work.mastheadText ?? 'light',
+    mastheadFit: work.mastheadFit ?? 'frame',
     scrollSteps: work.scrollSteps?.length
       ? work.scrollSteps.map((step) => ({
           id: crypto.randomUUID(),
@@ -812,7 +968,7 @@ function toWork(draft: Draft): WorkItem {
     location: draft.location.trim(),
     dimensions: first.dimensions,
     materials: first.materials,
-    description: draft.description.trim(),
+    description: sanitizeHtml(draft.description),
     image: draft.image,
     pieces,
     template: draft.template,
@@ -820,7 +976,22 @@ function toWork(draft: Draft): WorkItem {
   if (!work.location) delete work.location
   if (!work.description) delete work.description
   if (draft.template === 'standard') delete work.template
-  if (draft.template === 'masthead') work.mastheadText = draft.mastheadText
+  if (draft.template !== 'scroll-story' && draft.template !== 'column') {
+    if (draft.imageSize !== 'default') work.imageSize = draft.imageSize
+    if (draft.imageAlign !== 'left') work.imageAlign = draft.imageAlign
+  }
+  if (draft.template === 'masthead') {
+    work.mastheadText = draft.mastheadText
+    work.mastheadFit = draft.mastheadFit
+    work.descriptionAlign = draft.descriptionAlign
+    work.descriptionWidth = draft.descriptionWidth
+    work.descriptionPlacement = draft.descriptionPlacement
+  }
+  if (draft.template === 'column') {
+    work.descriptionAlign = draft.descriptionAlign
+    work.descriptionWidth = draft.descriptionWidth
+    work.descriptionPlacement = draft.descriptionPlacement
+  }
   if (draft.template === 'scroll-story') {
     const scrollSteps = draft.scrollSteps
       .filter((step) => step.image.trim())

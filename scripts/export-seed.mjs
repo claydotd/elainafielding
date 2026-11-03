@@ -4,8 +4,23 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const blobs = join(root, '.netlify/blobs-serve/entries/unlinked/site:works')
-const imageBlobs = join(root, '.netlify/blobs-serve/entries/unlinked/site:work-images')
+
+function resolveLocalSiteId() {
+  const statePath = join(root, '.netlify/state.json')
+  if (existsSync(statePath)) {
+    try {
+      const state = JSON.parse(readFileSync(statePath, 'utf8'))
+      if (typeof state.siteId === 'string' && state.siteId.trim()) return state.siteId.trim()
+    } catch {
+      // Fall through to unlinked.
+    }
+  }
+  return 'unlinked'
+}
+
+const localSiteId = resolveLocalSiteId()
+const blobs = join(root, `.netlify/blobs-serve/entries/${localSiteId}/site:works`)
+const imageBlobs = join(root, `.netlify/blobs-serve/entries/${localSiteId}/site:work-images`)
 const imageDir = join(root, 'public/images/works')
 const staticImage = /^\/images\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/
 const uploadedImage = /^\/api\/images\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i
@@ -13,7 +28,7 @@ const uploadedImage = /^\/api\/images\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9
 const listPath = join(blobs, 'list')
 const homepagePath = join(blobs, 'homepage')
 if (!existsSync(listPath) || !existsSync(homepagePath)) {
-  console.error('Local works were not found. Run npm run dev and save the site first.')
+  console.error('Local works were not found. Run npm run pull-blobs or npm run dev and save the site first.')
   process.exit(1)
 }
 

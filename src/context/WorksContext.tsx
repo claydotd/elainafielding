@@ -3,7 +3,7 @@ import { works as staticWorks, type WorkItem } from '../data/works'
 import { fetchWorks, WorksContext } from './works-context'
 
 export function WorksProvider({ children }: { children: ReactNode }) {
-  const [works, setWorks] = useState<WorkItem[]>(staticWorks)
+  const [works, setWorks] = useState<WorkItem[]>([])
   const [ready, setReady] = useState(false)
   const [fromApi, setFromApi] = useState(false)
 
@@ -27,6 +27,9 @@ export function WorksProvider({ children }: { children: ReactNode }) {
       if (next) {
         setWorks(next)
         setFromApi(true)
+      } else {
+        // Only use the committed seed when the live API is unavailable.
+        setWorks(staticWorks)
       }
       setReady(true)
     })

@@ -1,8 +1,10 @@
-import type { AboutBlock, AboutCarouselBlock } from './about'
+import type { AboutAlign, AboutBlock, AboutCarouselBlock, AboutImageAlign, AboutWidth } from './about'
 import {
   worksSeed,
+  type MastheadFit,
   type MastheadText,
   type ScrollClosingImage,
+  type WorkImageSize,
   type ScrollStoryStep,
   type WorkImage,
   type WorkItem,
@@ -11,17 +13,25 @@ import {
 } from './works-seed'
 
 export type {
+  MastheadFit,
   MastheadText,
   ScrollClosingImage,
   ScrollStoryStep,
   WorkImage,
+  WorkImageSize,
   WorkItem,
   WorkPiece,
   WorkTemplate,
 }
 
-export const WORK_TEMPLATES: WorkTemplate[] = ['standard', 'scroll-story', 'masthead']
+export const WORK_TEMPLATES: WorkTemplate[] = ['standard', 'scroll-story', 'masthead', 'column']
 export const MASTHEAD_TEXT_OPTIONS: MastheadText[] = ['dark', 'med', 'light']
+export const MASTHEAD_FIT_OPTIONS: MastheadFit[] = ['full', 'frame']
+export const DESCRIPTION_ALIGN_OPTIONS: AboutAlign[] = ['left', 'center', 'right', 'justify']
+export const DESCRIPTION_WIDTH_OPTIONS: AboutWidth[] = ['full', 'medium', 'small']
+export const DESCRIPTION_PLACEMENT_OPTIONS: AboutImageAlign[] = ['left', 'center', 'right']
+export const IMAGE_SIZE_OPTIONS: WorkImageSize[] = ['default', 'large', 'medium', 'small']
+export const IMAGE_ALIGN_OPTIONS: AboutImageAlign[] = ['left', 'center', 'right']
 
 export function workTemplate(work: Pick<WorkItem, 'template'>): WorkTemplate {
   return work.template ?? 'standard'
@@ -29,6 +39,45 @@ export function workTemplate(work: Pick<WorkItem, 'template'>): WorkTemplate {
 
 export function mastheadText(work: Pick<WorkItem, 'mastheadText'>): MastheadText {
   return work.mastheadText ?? 'light'
+}
+
+export function mastheadFit(work: Pick<WorkItem, 'mastheadFit'>): MastheadFit {
+  return work.mastheadFit ?? 'frame'
+}
+
+export function workImageSize(work: Pick<WorkItem, 'imageSize'>): WorkImageSize {
+  const size = work.imageSize as WorkImageSize | 'full' | undefined
+  if (!size || size === 'full') return 'default'
+  return size
+}
+
+export function workImageAlign(work: Pick<WorkItem, 'imageAlign'>): AboutImageAlign {
+  return work.imageAlign ?? 'left'
+}
+
+export function leadImageClass(size?: WorkImageSize, align?: AboutImageAlign) {
+  const resolvedSize = size ?? 'default'
+  const resolvedAlign = align ?? 'left'
+  return [
+    resolvedSize === 'small' ? 'image-size-small' : '',
+    resolvedSize === 'medium' ? 'image-size-medium' : '',
+    resolvedSize === 'large' ? 'image-size-large' : '',
+    resolvedAlign === 'center' ? 'image-align-center' : '',
+    resolvedAlign === 'right' ? 'image-align-right' : '',
+    resolvedAlign === 'left' ? 'image-align-left' : '',
+  ].filter(Boolean).join(' ')
+}
+
+export function descriptionAlign(work: Pick<WorkItem, 'descriptionAlign'>): AboutAlign {
+  return work.descriptionAlign ?? 'justify'
+}
+
+export function descriptionWidth(work: Pick<WorkItem, 'descriptionWidth'>): AboutWidth {
+  return work.descriptionWidth ?? 'medium'
+}
+
+export function descriptionPlacement(work: Pick<WorkItem, 'descriptionPlacement'>): AboutImageAlign {
+  return work.descriptionPlacement ?? 'left'
 }
 
 function withBase(path: string) {

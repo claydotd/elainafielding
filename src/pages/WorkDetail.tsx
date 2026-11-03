@@ -3,7 +3,20 @@ import { useParams } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { WorkDetailsTemplate } from '../components/WorkDetailsTemplate'
 import { useWorks } from '../context/useWorks'
-import { mastheadText, workContentBlocks, workPieces, workSummary, workTemplate } from '../data/works'
+import {
+  descriptionAlign,
+  descriptionPlacement,
+  descriptionWidth,
+  mastheadFit,
+  mastheadText,
+  workContentBlocks,
+  workImageAlign,
+  workImageSize,
+  workPieces,
+  workSummary,
+  workTemplate,
+} from '../data/works'
+import { plainText } from '../lib/sanitize-html'
 import { NotFound } from './NotFound'
 
 type WorkPageModule = {
@@ -33,11 +46,16 @@ function customPageForSlug(slug: string) {
 
 export function WorkDetail() {
   const { slug = '' } = useParams()
-  const { works } = useWorks()
+  const { works, ready } = useWorks()
   const CustomPage = customPageForSlug(slug)
 
   if (CustomPage) {
     return <CustomPage />
+  }
+
+  // Wait for /api/works so a stale seed lead never paints before live data.
+  if (!ready) {
+    return <div className="page-container" aria-hidden="true" />
   }
 
   const work = works.find((item) => item.slug === slug)
@@ -51,7 +69,7 @@ export function WorkDetail() {
       <Seo
         title={work.name}
         path={`/work/${work.slug}`}
-        description={work.description ?? workSummary(work)}
+        description={work.description ? plainText(work.description) || workSummary(work) : workSummary(work)}
       />
       <div className="page-container">
         <WorkDetailsTemplate
@@ -60,10 +78,16 @@ export function WorkDetail() {
           pieces={workPieces(work)}
           location={work.location}
           description={work.description ?? ''}
+          descriptionAlign={descriptionAlign(work)}
+          descriptionWidth={descriptionWidth(work)}
+          descriptionPlacement={descriptionPlacement(work)}
           image={work.image}
+          imageSize={workImageSize(work)}
+          imageAlign={workImageAlign(work)}
           blocks={workContentBlocks(work)}
           template={workTemplate(work)}
           mastheadText={mastheadText(work)}
+          mastheadFit={mastheadFit(work)}
           scrollSteps={work.scrollSteps}
         />
       </div>

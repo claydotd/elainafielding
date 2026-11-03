@@ -1,12 +1,22 @@
 import { Link } from 'react-router-dom'
 import { useWorks } from '../context/useWorks'
-import type { AboutBlock } from '../data/about'
-import type { MastheadText, ScrollStoryStep, WorkItem, WorkPiece, WorkTemplate } from '../data/works'
+import type { AboutAlign, AboutBlock, AboutImageAlign, AboutWidth } from '../data/about'
+import {
+  leadImageClass,
+  type MastheadFit,
+  type MastheadText,
+  type ScrollStoryStep,
+  type WorkImageSize,
+  type WorkItem,
+  type WorkPiece,
+  type WorkTemplate,
+} from '../data/works'
 import { workListHref } from '../lib/work-list'
 import { fittedImage } from '../lib/fitted-image'
 import { AboutContent } from './AboutContent'
 import { FadeImage } from './FadeImage'
 import { ScrollStoryHero } from './ScrollStoryHero'
+import { WorkDescription } from './WorkDescription'
 import { WorkMeta } from './WorkGalleryItem'
 
 type WorkDetailsTemplateProps = {
@@ -15,10 +25,16 @@ type WorkDetailsTemplateProps = {
   pieces: WorkPiece[]
   location?: string
   description: string
+  descriptionAlign?: AboutAlign
+  descriptionWidth?: AboutWidth
+  descriptionPlacement?: AboutImageAlign
   image: string
+  imageSize?: WorkImageSize
+  imageAlign?: AboutImageAlign
   blocks?: AboutBlock[]
   template?: WorkTemplate
   mastheadText?: MastheadText
+  mastheadFit?: MastheadFit
   scrollSteps?: ScrollStoryStep[]
 }
 
@@ -53,12 +69,20 @@ export function WorkDetailsTemplate({
   pieces,
   location,
   description,
+  descriptionAlign = 'justify',
+  descriptionWidth = 'medium',
+  descriptionPlacement = 'left',
   image,
+  imageSize = 'default',
+  imageAlign = 'left',
   blocks = [],
   template = 'standard',
   mastheadText = 'light',
+  mastheadFit = 'frame',
   scrollSteps = [],
 }: WorkDetailsTemplateProps) {
+  const mediaClass = leadImageClass(imageSize, imageAlign)
+
   return (
     <div className="work-details-container">
       <BackToWork slug={slug} />
@@ -76,7 +100,21 @@ export function WorkDetailsTemplate({
           pieces={pieces}
           location={location}
           image={image}
+          imageSize={imageSize}
+          imageAlign={imageAlign}
           text={mastheadText}
+          fit={mastheadFit}
+        />
+      ) : template === 'column' ? (
+        <ColumnHero
+          title={title}
+          pieces={pieces}
+          location={location}
+          description={description}
+          descriptionAlign={descriptionAlign}
+          descriptionWidth={descriptionWidth}
+          descriptionPlacement={descriptionPlacement}
+          image={image}
         />
       ) : (
         <article className="work-details">
@@ -84,15 +122,11 @@ export function WorkDetailsTemplate({
             <div className="work-details__meta">
               <WorkMeta pieces={pieces} location={location} />
             </div>
-            {description ? (
-              <div className="work-details__description">
-                <p>{description}</p>
-              </div>
-            ) : null}
+            <WorkDescription description={description} />
           </div>
 
           {image ? (
-            <div className="work-details__media">
+            <div className={['work-details__media', mediaClass].filter(Boolean).join(' ')}>
               <FadeImage
                 {...fittedImage(image, 'hero', '(max-width: 640px) 66vw, 55vw')}
                 alt={title}
@@ -105,10 +139,14 @@ export function WorkDetailsTemplate({
         </article>
       )}
 
-      {template === 'masthead' && description ? (
-        <div className="work-details__description work-details__description--after-hero">
-          <p>{description}</p>
-        </div>
+      {template === 'masthead' ? (
+        <WorkDescription
+          description={description}
+          align={descriptionAlign}
+          width={descriptionWidth}
+          placement={descriptionPlacement}
+          className="work-details__description--after-hero"
+        />
       ) : null}
 
       {blocks.length > 0 ? (
@@ -127,20 +165,82 @@ function MastheadHero({
   pieces,
   location,
   image,
+  imageSize = 'default',
+  imageAlign = 'left',
   text,
+  fit,
 }: {
   title: string
   pieces: WorkPiece[]
   location?: string
   image: string
+  imageSize?: WorkImageSize
+  imageAlign?: AboutImageAlign
   text: MastheadText
+  fit: MastheadFit
 }) {
+  const mediaClass = leadImageClass(imageSize, imageAlign)
+
   return (
-    <section className={`work-masthead work-masthead--${text}`}>
+    <section className={`work-masthead work-masthead--${text} work-masthead--fit-${fit}`}>
+      <div className="work-masthead__column">
+        {image ? (
+          <div className={['work-masthead__media', mediaClass].filter(Boolean).join(' ')}>
+            <FadeImage
+              {...fittedImage(image, 'hero', '100vw')}
+              alt={title}
+              decoding="async"
+              loading="eager"
+              fetchPriority="high"
+            />
+          </div>
+        ) : null}
+        <div className="work-masthead__overlay">
+          <div className="work-masthead__meta">
+            <WorkMeta heading="h1" pieces={pieces} location={location} />
+          </div>
+        </div>
+        {/* Scroll room while the lead stays sticky and unobstructed, then blocks begin. */}
+        <div className="work-masthead__runway" aria-hidden="true" />
+      </div>
+    </section>
+  )
+}
+
+function ColumnHero({
+  title,
+  pieces,
+  location,
+  description,
+  descriptionAlign,
+  descriptionWidth,
+  descriptionPlacement,
+  image,
+}: {
+  title: string
+  pieces: WorkPiece[]
+  location?: string
+  description: string
+  descriptionAlign: AboutAlign
+  descriptionWidth: AboutWidth
+  descriptionPlacement: AboutImageAlign
+  image: string
+}) {
+  const widthClass =
+    descriptionWidth === 'medium' ? 'width-medium'
+      : descriptionWidth === 'small' ? 'width-small'
+        : ''
+  const placeClass =
+    descriptionPlacement === 'center' ? 'place-center'
+      : descriptionPlacement === 'right' ? 'place-right'
+        : 'place-left'
+
+  return (
+    <article className={['work-column', widthClass, placeClass].filter(Boolean).join(' ')}>
       {image ? (
-        <div className="work-masthead__media">
+        <div className="work-column__media">
           <FadeImage
-            {...fittedImage(image, 'hero', '100vw')}
+            {...fittedImage(image, 'hero', '(max-width: 640px) 100vw, 50rem')}
             alt={title}
             decoding="async"
             loading="eager"
@@ -148,14 +248,18 @@ function MastheadHero({
           />
         </div>
       ) : null}
-      <div className="work-masthead__overlay">
-        <div className="work-masthead__meta">
+      <div className="work-column__details">
+        <div className="work-column__meta">
           <WorkMeta heading="h1" pieces={pieces} location={location} />
         </div>
+        <WorkDescription
+          description={description}
+          align={descriptionAlign}
+          width="full"
+          className="work-column__description"
+        />
       </div>
-      {/* Scroll room while the lead stays sticky and unobstructed, then blocks begin. */}
-      <div className="work-masthead__runway" aria-hidden="true" />
-    </section>
+    </article>
   )
 }
 

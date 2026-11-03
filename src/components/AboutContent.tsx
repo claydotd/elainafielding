@@ -44,7 +44,7 @@ function AboutBlockView({ block }: { block: AboutBlock }) {
 }
 
 function TextBlock({ block }: { block: AboutTextBlock }) {
-  return <Bio html={block.html} className={aboutTextClass(block.align, block.width)} />
+  return <Bio html={block.html} className={aboutTextClass(block.align, block.width, block.placement)} />
 }
 
 function SplitBlock({ block }: { block: AboutSplitBlock }) {

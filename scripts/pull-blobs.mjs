@@ -7,8 +7,6 @@ import { getStore } from '@netlify/blobs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const blobsRoot = join(root, '.netlify/blobs-serve')
-// Matches netlify dev when the folder is not linked, and scripts/export-seed.mjs.
-const localSiteId = 'unlinked'
 const stores = ['works', 'work-images']
 const concurrency = 8
 
@@ -53,6 +51,11 @@ function resolveSiteId() {
   }
 }
 
+/** Folder netlify dev actually reads: linked site id, or "unlinked". */
+function resolveLocalSiteId() {
+  return resolveSiteId() || 'unlinked'
+}
+
 async function listKeys(store) {
   const keys = []
   for await (const page of store.list({ paginate: true })) {
@@ -74,7 +77,7 @@ async function mapPool(items, limit, worker) {
   return results
 }
 
-function storePaths(storeName) {
+function storePaths(storeName, localSiteId) {
   const encoded = `site:${storeName}`
   return {
     entries: join(blobsRoot, 'entries', localSiteId, encoded),
@@ -82,8 +85,8 @@ function storePaths(storeName) {
   }
 }
 
-function writeBlob(storeName, key, bytes, metadata) {
-  const paths = storePaths(storeName)
+function writeBlob(localSiteId, storeName, key, bytes, metadata) {
+  const paths = storePaths(storeName, localSiteId)
   const entryPath = join(paths.entries, key)
   const metaPath = join(paths.metadata, key)
   mkdirSync(dirname(entryPath), { recursive: true })
@@ -94,6 +97,7 @@ function writeBlob(storeName, key, bytes, metadata) {
 
 const token = resolveToken()
 const siteID = resolveSiteId()
+const localSiteId = resolveLocalSiteId()
 if (!token) {
   console.error('No Netlify auth token found. Run `netlify login` or set NETLIFY_AUTH_TOKEN.')
   process.exit(1)
@@ -107,7 +111,7 @@ mkdirSync(blobsRoot, { recursive: true })
 
 let total = 0
 for (const storeName of stores) {
-  const paths = storePaths(storeName)
+  const paths = storePaths(storeName, localSiteId)
   rmSync(paths.entries, { recursive: true, force: true })
   rmSync(paths.metadata, { recursive: true, force: true })
   mkdirSync(paths.entries, { recursive: true })
@@ -124,11 +128,11 @@ for (const storeName of stores) {
   await mapPool(keys, concurrency, async (key) => {
     const result = await store.getWithMetadata(key, { type: 'arrayBuffer' })
     if (!result?.data) throw new Error(`Missing blob ${storeName}/${key}`)
-    writeBlob(storeName, key, result.data, result.metadata ?? {})
+    writeBlob(localSiteId, storeName, key, result.data, result.metadata ?? {})
   })
 
   total += keys.length
   console.log(`Pulled ${keys.length} object${keys.length === 1 ? '' : 's'} from ${storeName}.`)
 }
 
-console.log(`Wrote ${total} blobs into .netlify/blobs-serve for local netlify dev.`)
+console.log(`Wrote ${total} blobs into .netlify/blobs-serve/${localSiteId} for local netlify dev.`)

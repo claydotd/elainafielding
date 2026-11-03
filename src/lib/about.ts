@@ -7,7 +7,8 @@ const IMAGE_ALIGNS = new Set<AboutImageAlign>(['left', 'center', 'right'])
 const IMAGE_SIZES = new Set<AboutImageSize>(['small', 'medium', 'large', 'full'])
 const SIDES = new Set(['start', 'end'])
 
-export function aboutTextClass(align?: AboutAlign, width?: AboutWidth) {
+export function aboutTextClass(align?: AboutAlign, width?: AboutWidth, placement?: AboutImageAlign) {
+  const place = placement ?? 'left'
   return [
     'bio-text',
     align === 'left' ? 'left-aligned' : '',
@@ -16,6 +17,7 @@ export function aboutTextClass(align?: AboutAlign, width?: AboutWidth) {
     align === 'justify' ? 'justify-aligned' : '',
     width === 'medium' ? 'width-medium' : '',
     width === 'small' ? 'width-small' : '',
+    place === 'center' ? 'place-center' : place === 'right' ? 'place-right' : 'place-left',
   ].filter(Boolean).join(' ')
 }
 
@@ -54,6 +56,7 @@ function isAboutBlock(value: unknown): value is AboutBlock {
     return typeof block.html === 'string'
       && typeof block.align === 'string' && ALIGNS.has(block.align as AboutAlign)
       && typeof block.width === 'string' && WIDTHS.has(block.width as AboutWidth)
+      && (block.placement == null || (typeof block.placement === 'string' && IMAGE_ALIGNS.has(block.placement as AboutImageAlign)))
   }
   if (block.type !== 'image' && block.type !== 'split') return false
   if (typeof block.image !== 'string' || typeof block.alt !== 'string' || typeof block.caption !== 'string') return false

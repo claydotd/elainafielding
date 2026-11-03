@@ -24,11 +24,13 @@ export function FadeImage({
   useLayoutEffect(() => {
     const image = ref.current
     if (image?.complete && image.naturalWidth > 0) setLoadedSrc(src)
+    else setLoadedSrc(null)
   }, [src])
 
   return (
     <img
       {...props}
+      key={src}
       ref={ref}
       src={src}
       alt={alt}

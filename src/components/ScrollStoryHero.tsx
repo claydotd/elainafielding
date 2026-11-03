@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ScrollStoryStep, WorkPiece } from '../data/works-seed'
 import { fittedImage } from '../lib/fitted-image'
 import { FadeImage } from './FadeImage'
+import { WorkDescription } from './WorkDescription'
 import { WorkMeta } from './WorkGalleryItem'
 import '../pages/Works/scroll-story.css'
 
@@ -60,11 +61,7 @@ export function ScrollStoryHero({
     <article className="scroll-story">
       <div className="scroll-story__meta">
         <WorkMeta heading="h1" pieces={pieces} location={location} />
-        {description ? (
-          <div className="work-details__description">
-            <p>{description}</p>
-          </div>
-        ) : null}
+        <WorkDescription description={description} />
       </div>
 
       <div className="scroll-story__stage">
@@ -79,6 +76,7 @@ export function ScrollStoryHero({
               decoding="async"
               loading={index === activeIndex ? 'eager' : 'lazy'}
               fetchPriority={index === 0 ? 'high' : undefined}
+              style={{ aspectRatio: 'unset' }}
             />
           ))}
         </div>

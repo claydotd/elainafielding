@@ -29,11 +29,22 @@ export function plainText(value: string) {
 export function htmlFromPlainText(value: string) {
   const normalized = value.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
   if (!normalized.trim()) return ''
+  // Soft wraps in legacy plain text were line-length breaks, not hard breaks.
+  // Collapse single newlines to spaces (matching pre-rich-text rendering); keep
+  // blank lines as paragraph boundaries.
   const html = normalized
     .split(/\n{2,}/)
-    .map((paragraph) => `<p>${escapeText(paragraph).replace(/\n/g, '<br>')}</p>`)
+    .map((paragraph) => `<p>${escapeText(paragraph.replace(/\n/g, ' ').replace(/ {2,}/g, ' ').trim())}</p>`)
     .join('')
   return sanitizeHtml(html)
+}
+
+/** Accept stored HTML, or migrate legacy plain-text descriptions. */
+export function storedRichText(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  if (/<[a-z][\s\S]*>/i.test(trimmed)) return sanitizeHtml(trimmed)
+  return htmlFromPlainText(trimmed)
 }
 
 export function sanitizeUrl(value: string) {
