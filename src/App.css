@@ -478,10 +478,22 @@
     font-size: var(--text-xl);
   }
 
+  /* Overlay the page instead of growing the header (homepage carousel stays put). */
+  .nav {
+    position: relative;
+  }
+
   .nav-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1;
     display: grid;
     grid-template-rows: 0fr;
     pointer-events: none;
+    background: var(--color-nav-bg);
+    backdrop-filter: blur(12px);
     transition: grid-template-rows 480ms var(--ease);
   }
 
