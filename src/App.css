@@ -3,13 +3,14 @@
 .site {
   display: flex;
   flex-direction: column;
-  min-height: 100svh;
+  /* dvh tracks the live visible height above mobile browser chrome. */
+  min-height: 100dvh;
 }
 
 /* Homepage: lock to the visible viewport so the carousel cannot outgrow iOS Safari chrome. */
 .site--home {
-  height: 100svh;
-  max-height: 100svh;
+  height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
 }
 
